@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scrumy - Quadro Scrum</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Scrumy</h1>
+      <div class="toolbar">
+        <button id="addCardBtn" class="btn primary">Nova tarefa</button>
+        <button id="clearBoardBtn" class="btn">Limpar quadro</button>
+      </div>
+    </header>
+
+    <main class="board" id="board">
+      <section class="column" aria-label="Backlog">
+        <h2>Backlog</h2>
+        <div class="column-cards" data-status="backlog"></div>
+      </section>
+      <section class="column" aria-label="A Fazer">
+        <h2>A Fazer</h2>
+        <div class="column-cards" data-status="todo"></div>
+      </section>
+      <section class="column" aria-label="Fazendo">
+        <h2>Fazendo</h2>
+        <div class="column-cards" data-status="doing"></div>
+      </section>
+      <section class="column" aria-label="Revisão">
+        <h2>Revisão</h2>
+        <div class="column-cards" data-status="review"></div>
+      </section>
+      <section class="column" aria-label="Concluído">
+        <h2>Concluído</h2>
+        <div class="column-cards" data-status="done"></div>
+      </section>
+    </main>
+
+    <div id="modal" class="modal hidden" aria-hidden="true" role="dialog" aria-labelledby="modalTitle">
+      <div class="modal-content" role="document">
+        <h3 id="modalTitle">Nova Tarefa</h3>
+        <form id="cardForm">
+          <input type="hidden" id="cardId" />
+          <label class="field">
+            <span>Título</span>
+            <input id="titleInput" type="text" required maxlength="120" placeholder="Ex.: Implementar login" />
+          </label>
+          <label class="field">
+            <span>Descrição</span>
+            <textarea id="descInput" rows="4" placeholder="Detalhes, critérios de aceite, etc."></textarea>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="statusSelect">
+              <option value="backlog">Backlog</option>
+              <option value="todo">A Fazer</option>
+              <option value="doing">Fazendo</option>
+              <option value="review">Revisão</option>
+              <option value="done">Concluído</option>
+            </select>
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="btn" id="cancelBtn">Cancelar</button>
+            <button type="submit" class="btn primary" id="saveBtn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+  </html>
+
