@@ -75,6 +75,7 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 ## Observações
 - “Limpar quadro” é irreversível e remove todos os cartões salvos.
 - A exportação de imagem respeita o tema atual.
+- Rodapé fixo com links para GitHub e para o canal do autor (YouTube: Gabriel Souto).
 
 ## Limitações
 - Sem sincronização: os dados ficam no navegador/perfil local (não há backup/conta/login).
@@ -84,4 +85,5 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 - Não há importação/exportação de JSON (pode ser adicionada futuramente).
 
 ## Links
-- Repositório: https://github.com/gabrielsouto/scrumy
+- GitHub: https://github.com/gabrielsouto/scrumy
+- YouTube: https://www.youtube.com/GabrielSouto
