@@ -4,6 +4,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 
 ## Funcionalidades
 - 5 colunas: Backlog, A Fazer, Fazendo, Revisão, Concluído.
+- Múltiplos quadros: selecionar, criar, duplicar (Salvar como) e apagar.
 - CRUD de cartões: criar, editar (✎) e excluir (🗑).
 - Arrastar e soltar entre colunas (drag & drop).
 - Modal para criação/edição com título, descrição e status.
@@ -17,6 +18,10 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 ## Como usar
 1. Abra o arquivo `index.html` em um navegador moderno (Chrome, Edge, Firefox, Safari).
 2. Use a barra superior para:
+   - Selecionar quadro: escolha no seletor de quadros.
+   - Novo Quadro: cria um quadro vazio com o nome informado.
+   - Salvar como: duplica o quadro atual com um novo nome.
+   - Apagar Quadro: remove o quadro atual (se for o último, um "Quadro 1" vazio é recriado).
    - Nova tarefa: abre o modal de criação.
    - Tema: alterna entre claro/escuro.
    - Exportar imagem: baixa um PNG do quadro atual (com header).
@@ -35,9 +40,18 @@ python -m http.server 8000
 ```
 
 ## Persistência de dados
-- Cartões são salvos em `localStorage` usando a chave `scrumy.board.v1`.
+- Cartões por quadro são salvos em `localStorage` na chave `scrumy.board.v1.<idDoQuadro>`.
 - Preferência de tema é salva em `scrumy.theme.v1`.
+- Registro de quadros (lista e metadados) em `scrumy.boards.meta.v1`.
+- Quadro atual selecionado em `scrumy.current.boardId.v1`.
+- Migração automática: se houver dados antigos em `scrumy.board.v1`, eles são movidos para um quadro padrão "Quadro 1" na primeira carga.
 - Os dados ficam no navegador atual (por máquina/perfil). Limpar dados do site apaga o quadro.
+
+## Quadros
+- Selecionar: use o seletor "Selecionar quadro" na barra superior.
+- Criar novo: clique em "Novo Quadro" e informe o nome. O quadro inicia vazio.
+- Salvar como (duplicar): clique em "Salvar como" para criar um novo quadro com cópia dos cartões atuais.
+- Apagar: clique em "Apagar Quadro" e confirme. Se apagar o último quadro existente, um quadro vazio "Quadro 1" é criado automaticamente para continuar usando o app.
 
 ## Exportar imagem
 - Botão: “Exportar imagem”.
@@ -61,6 +75,13 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 ## Observações
 - “Limpar quadro” é irreversível e remove todos os cartões salvos.
 - A exportação de imagem respeita o tema atual.
+
+## Limitações
+- Sem sincronização: os dados ficam no navegador/perfil local (não há backup/conta/login).
+- Sem colaboração em tempo real: uso é individual no dispositivo atual.
+- Limpar dados do site/apagar `localStorage` remove quadros e cartões.
+- Exportação de imagem é um snapshot estático (não inclui interações/menus abertos).
+- Não há importação/exportação de JSON (pode ser adicionada futuramente).
 
 ## Links
 - Repositório: https://github.com/gabrielsouto/scrumy

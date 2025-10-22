@@ -54,6 +54,14 @@ body {
 h1 { margin: 0; font-size: 24px; letter-spacing: .5px; }
 
 .toolbar { display: flex; gap: 10px; }
+.select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  min-width: 180px;
+}
 .btn {
   background: transparent;
   color: var(--text);

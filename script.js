@@ -1,5 +1,8 @@
-const STORAGE_KEY = "scrumy.board.v1";
+const STORAGE_KEY = "scrumy.board.v1"; // legacy single-board key (for migration)
 const THEME_STORAGE_KEY = "scrumy.theme.v1";
+const BOARDS_META_KEY = "scrumy.boards.meta.v1";
+const CURRENT_BOARD_KEY = "scrumy.current.boardId.v1";
+const BOARD_STATE_PREFIX = "scrumy.board.v1."; // per-board state: scrumy.board.v1.<id>
 const STATUSES = [
   { key: "backlog", label: "Backlog" },
   { key: "todo", label: "A Fazer" },
@@ -9,6 +12,7 @@ const STATUSES = [
 ];
 
 let state = [];
+let currentBoardId = null;
 
 function uid() {
   return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -27,7 +31,18 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!currentBoardId) return;
+  localStorage.setItem(BOARD_STATE_PREFIX + currentBoardId, JSON.stringify(state));
+  // update meta updatedAt
+  try {
+    const raw = localStorage.getItem(BOARDS_META_KEY);
+    const meta = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(meta)) {
+      const m = meta.find((b) => b.id === currentBoardId);
+      if (m) m.updatedAt = Date.now();
+      localStorage.setItem(BOARDS_META_KEY, JSON.stringify(meta));
+    }
+  } catch {}
 }
 
 // Theme management
@@ -57,6 +72,39 @@ function toggleTheme() {
   applyTheme(next);
 }
 
+// Boards management helpers
+function boardKey(id) { return BOARD_STATE_PREFIX + id; }
+
+function loadBoardsMeta() {
+  try {
+    const raw = localStorage.getItem(BOARDS_META_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function saveBoardsMeta(meta) {
+  localStorage.setItem(BOARDS_META_KEY, JSON.stringify(meta));
+}
+
+function getCurrentBoardId() {
+  try { return localStorage.getItem(CURRENT_BOARD_KEY); } catch { return null; }
+}
+
+function setCurrentBoardId(id) {
+  currentBoardId = id;
+  try { localStorage.setItem(CURRENT_BOARD_KEY, id); } catch {}
+}
+
+function loadStateForBoard(id) {
+  try {
+    const raw = localStorage.getItem(boardKey(id));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
 function findCard(id) {
   return state.find((c) => c.id === id);
 }
@@ -70,6 +118,64 @@ function renderBoard() {
       container.appendChild(renderCard(card));
     }
   }
+}
+
+// Boards UI helpers and actions
+function refreshBoardSelect() {
+  const select = document.getElementById("boardSelect");
+  if (!select) return;
+  const meta = loadBoardsMeta();
+  select.innerHTML = "";
+  for (const b of meta) {
+    const opt = document.createElement("option");
+    opt.value = b.id;
+    opt.textContent = b.name || b.id;
+    if (b.id === currentBoardId) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+function createBoard(name, initialState = []) {
+  const meta = loadBoardsMeta();
+  const id = "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now() };
+  meta.push(boardMeta);
+  saveBoardsMeta(meta);
+  localStorage.setItem(boardKey(id), JSON.stringify(initialState));
+  setCurrentBoardId(id);
+  state = initialState.slice();
+  refreshBoardSelect();
+  renderBoard();
+}
+
+function deleteBoard(id) {
+  const meta = loadBoardsMeta();
+  const idx = meta.findIndex((b) => b.id === id);
+  if (idx === -1) return;
+  meta.splice(idx, 1);
+  saveBoardsMeta(meta);
+  try { localStorage.removeItem(boardKey(id)); } catch {}
+  if (!meta.length) {
+    createBoard("Quadro 1", []);
+  } else {
+    const next = meta[0].id;
+    setCurrentBoardId(next);
+    state = loadStateForBoard(next);
+    refreshBoardSelect();
+    renderBoard();
+  }
+}
+
+function loadBoard(id) {
+  setCurrentBoardId(id);
+  state = loadStateForBoard(id);
+  refreshBoardSelect();
+  renderBoard();
+}
+
+function saveBoardAs(name) {
+  const clone = state.map((c) => ({ ...c }));
+  createBoard(name || "Cópia do Quadro", clone);
 }
 
 function renderCard(card) {
@@ -235,6 +341,47 @@ function bindUI() {
   if (exportBtn) {
     exportBtn.addEventListener("click", exportBoardImage);
   }
+
+  const boardSelect = document.getElementById("boardSelect");
+  if (boardSelect) {
+    boardSelect.addEventListener("change", (e) => {
+      const targetId = e.target.value;
+      if (targetId && targetId !== currentBoardId) {
+        loadBoard(targetId);
+      }
+    });
+  }
+
+  const newBoardBtn = document.getElementById("newBoardBtn");
+  if (newBoardBtn) {
+    newBoardBtn.addEventListener("click", () => {
+      const name = prompt("Nome do novo quadro:", "Novo Quadro");
+      if (name === null) return;
+      createBoard(name.trim() || "Novo Quadro", []);
+    });
+  }
+
+  const saveBoardAsBtn = document.getElementById("saveBoardAsBtn");
+  if (saveBoardAsBtn) {
+    saveBoardAsBtn.addEventListener("click", () => {
+      const name = prompt("Salvar quadro como:", "Cópia do Quadro");
+      if (name === null) return;
+      saveBoardAs(name.trim() || "Cópia do Quadro");
+    });
+  }
+
+  const deleteBoardBtn = document.getElementById("deleteBoardBtn");
+  if (deleteBoardBtn) {
+    deleteBoardBtn.addEventListener("click", () => {
+      if (!currentBoardId) return;
+      const meta = loadBoardsMeta();
+      const cur = meta.find((b) => b.id === currentBoardId);
+      const label = (cur && cur.name) ? cur.name : "quadro";
+      const ok = confirm(`Apagar "${label}"? Esta ação não pode ser desfeita.`);
+      if (!ok) return;
+      deleteBoard(currentBoardId);
+    });
+  }
 }
 
 function maybeSeed() {
@@ -253,8 +400,40 @@ function maybeSeed() {
 function init() {
   // Theme first to avoid FOUC between dark/light
   applyTheme(getInitialTheme());
-  state = loadState();
-  if (!state.length) maybeSeed();
+
+  let meta = loadBoardsMeta();
+  let curId = getCurrentBoardId();
+
+  if (!meta.length) {
+    // Try migrate legacy single-board data
+    let legacy = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      legacy = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(legacy)) legacy = [];
+    } catch { legacy = []; }
+
+    if (legacy.length) {
+      createBoard("Quadro 1", legacy);
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    } else {
+      createBoard("Quadro 1", []);
+      maybeSeed();
+    }
+  } else {
+    if (!curId || !meta.some((b) => b.id === curId)) {
+      curId = meta[0].id;
+      setCurrentBoardId(curId);
+    } else {
+      currentBoardId = curId;
+    }
+    state = loadStateForBoard(curId);
+    refreshBoardSelect();
+    if (!state.length && meta.length === 1) {
+      maybeSeed();
+    }
+  }
+
   bindUI();
   setupDnD();
   renderBoard();
