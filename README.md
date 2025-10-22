@@ -5,6 +5,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 ## Funcionalidades
 - 5 colunas: Backlog, A Fazer, Fazendo, Revisão, Concluído.
 - Múltiplos quadros: selecionar, criar, duplicar (Salvar como) e apagar.
+- Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Exportar).
 - CRUD de cartões: criar, editar (✎) e excluir (🗑).
 - Arrastar e soltar entre colunas (drag & drop).
 - Modal para criação/edição com título, descrição e status.
@@ -12,20 +13,17 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Tema claro/escuro com alternância na toolbar e preferência salva.
 - Exportar imagem (PNG) da página (header + board) com timestamp.
 - Limpar quadro (apaga todos os cartões).
-- Layout responsivo (1–5 colunas conforme largura).
+- Nome do quadro atual exibido ao lado do logo.
+- Layout responsivo com colunas dinâmicas (auto‑fit, sem scroll horizontal).
 - Semente de exemplo na primeira execução (se não houver dados salvos).
 
 ## Como usar
 1. Abra o arquivo `index.html` em um navegador moderno (Chrome, Edge, Firefox, Safari).
-2. Use a barra superior para:
-   - Selecionar quadro: escolha no seletor de quadros.
-   - Novo Quadro: cria um quadro vazio com o nome informado.
-   - Salvar como: duplica o quadro atual com um novo nome.
-   - Apagar Quadro: remove o quadro atual (se for o último, um "Quadro 1" vazio é recriado).
-   - Nova tarefa: abre o modal de criação.
-   - Tema: alterna entre claro/escuro.
-   - Exportar imagem: baixa um PNG do quadro atual (com header).
-   - Limpar quadro: remove todos os cartões (ação irreversível).
+2. Menu superior (cabeçalho fixo):
+   - Quadros: Selecionar quadro | Novo Quadro | Salvar como | Apagar Quadro.
+   - Tarefas: Nova tarefa | Limpar quadro.
+   - Exportar: Exportar imagem (PNG do header + board).
+   - Tema: botão à direita alterna entre claro/escuro.
 3. Em cada cartão:
    - ✎ Editar: abre o modal com os dados do cartão.
    - 🗑 Excluir: remove o cartão após confirmação.
