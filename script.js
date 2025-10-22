@@ -230,6 +230,11 @@ function bindUI() {
   if (themeBtn) {
     themeBtn.addEventListener("click", toggleTheme);
   }
+
+  const exportBtn = document.getElementById("exportImgBtn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", exportBoardImage);
+  }
 }
 
 function maybeSeed() {
@@ -253,6 +258,40 @@ function init() {
   bindUI();
   setupDnD();
   renderBoard();
+}
+
+// Export board as image (PNG)
+async function exportBoardImage() {
+  try {
+    const target = document.body; // capture header + board
+    if (!window.html2canvas) {
+      alert("Ferramenta de captura indisponível.");
+      return;
+    }
+    // ensure modal borders/hover states settle
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const scale = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const canvas = await window.html2canvas(target, {
+      scale,
+      useCORS: true,
+      backgroundColor: getComputedStyle(document.body).backgroundColor || undefined,
+      logging: false,
+    });
+    const dataUrl = canvas.toDataURL("image/png");
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const fileName = `scrumy-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.png`;
+
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (err) {
+    console.error("Falha ao exportar imagem:", err);
+    alert("Não foi possível gerar a imagem do quadro.");
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
