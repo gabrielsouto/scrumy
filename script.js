@@ -1,4 +1,5 @@
 const STORAGE_KEY = "scrumy.board.v1";
+const THEME_STORAGE_KEY = "scrumy.theme.v1";
 const STATUSES = [
   { key: "backlog", label: "Backlog" },
   { key: "todo", label: "A Fazer" },
@@ -27,6 +28,33 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// Theme management
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {}
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return prefersDark ? "dark" : "light";
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.setAttribute("data-theme", theme);
+  const btn = document.getElementById("themeToggleBtn");
+  if (btn) {
+    btn.textContent = theme === "dark" ? "Tema: Escuro" : "Tema: Claro";
+    btn.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+  }
+  try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch {}
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "dark";
+  const next = current === "dark" ? "light" : "dark";
+  applyTheme(next);
 }
 
 function findCard(id) {
@@ -197,6 +225,11 @@ function bindUI() {
     renderBoard();
     closeModal();
   });
+
+  const themeBtn = document.getElementById("themeToggleBtn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", toggleTheme);
+  }
 }
 
 function maybeSeed() {
@@ -213,6 +246,8 @@ function maybeSeed() {
 }
 
 function init() {
+  // Theme first to avoid FOUC between dark/light
+  applyTheme(getInitialTheme());
   state = loadState();
   if (!state.length) maybeSeed();
   bindUI();

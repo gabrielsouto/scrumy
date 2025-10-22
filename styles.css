@@ -10,6 +10,29 @@
   --card: #111827;
   --danger: #ef4444;
   --shadow: 0 6px 20px rgba(0,0,0,.25);
+  --bg-gradient: radial-gradient(1200px 800px at 20% 0%, #0b1220 0%, #0b1220 35%, #0f172a 100%);
+  --hover-1: rgba(255,255,255,.03);
+  --hover-2: rgba(255,255,255,.05);
+  --overlay-bg: rgba(2,6,23,.6);
+}
+
+/* Light theme overrides */
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --panel-2: #f8fafc;
+  --text: #0f172a;
+  --muted: #475569;
+  --primary: #22c55e;
+  --primary-700: #16a34a;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --danger: #ef4444;
+  --shadow: 0 4px 16px rgba(0,0,0,.08);
+  --bg-gradient: radial-gradient(1200px 800px at 20% 0%, #ffffff 0%, #ffffff 40%, #f1f5f9 100%);
+  --hover-1: rgba(0,0,0,.04);
+  --hover-2: rgba(0,0,0,.06);
+  --overlay-bg: rgba(0,0,0,.45);
 }
 
 * { box-sizing: border-box; }
@@ -17,7 +40,7 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-  background: radial-gradient(1200px 800px at 20% 0%, #0b1220 0%, #0b1220 35%, #0f172a 100%);
+  background: var(--bg-gradient);
   color: var(--text);
 }
 
@@ -39,7 +62,7 @@ h1 { margin: 0; font-size: 24px; letter-spacing: .5px; }
   padding: 10px 14px;
   cursor: pointer;
 }
-.btn:hover { background: rgba(255,255,255,.03); }
+.btn:hover { background: var(--hover-1); }
 .btn.primary { background: var(--primary); border-color: var(--primary); color: #0b1220; font-weight: 600; }
 .btn.primary:hover { background: var(--primary-700); border-color: var(--primary-700); }
 
@@ -108,13 +131,13 @@ h1 { margin: 0; font-size: 24px; letter-spacing: .5px; }
   display: grid; place-items: center;
   cursor: pointer;
 }
-.icon-btn:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.icon-btn:hover { color: var(--text); background: var(--hover-2); }
 .icon-btn.danger:hover { color: #fff; background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); }
 
 /* Modal */
 .modal {
   position: fixed; inset: 0; display: grid; place-items: center;
-  background: rgba(2,6,23,.6);
+  background: var(--overlay-bg);
   padding: 20px;
 }
 .modal.hidden { display: none; }
