@@ -15,6 +15,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Exportar/Importar JSON do quadro (backup/restauração).
 - Limpar quadro (apaga todos os cartões).
 - Nome do quadro atual exibido ao lado do logo.
+- Renomear quadro clicando no nome ao lado do logo.
 - Layout responsivo com colunas dinâmicas (auto‑fit, sem scroll horizontal).
 - Semente de exemplo na primeira execução (se não houver dados salvos).
 
@@ -22,6 +23,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 1. Abra o arquivo `index.html` em um navegador moderno (Chrome, Edge, Firefox, Safari).
 2. Menu superior (cabeçalho fixo):
    - Quadros: Selecionar quadro | Novo Quadro | Salvar como | Apagar Quadro.
+   - Renomear: clique no nome do quadro (pill ao lado do logo) para renomear.
    - Tarefas: Nova tarefa | Limpar quadro.
    - Importar/Exportar: Exportar imagem (PNG do header + board) | Exportar JSON | Importar JSON.
    - Tema: botão à direita alterna entre claro/escuro.
@@ -64,6 +66,7 @@ python -m http.server 8000
 - Criar novo: clique em "Novo Quadro" e informe o nome. O quadro inicia vazio.
 - Salvar como (duplicar): clique em "Salvar como" para criar um novo quadro com cópia dos cartões atuais.
 - Apagar: clique em "Apagar Quadro" e confirme. Se apagar o último quadro existente, um quadro vazio "Quadro 1" é criado automaticamente para continuar usando o app.
+ - Renomear: clique no nome do quadro exibido ao lado do logo e informe o novo nome.
 
 ## Exportar imagem
 - Botão: “Exportar imagem”.

@@ -120,7 +120,25 @@ function updateCurrentBoardName() {
   if (!el) return;
   const meta = loadBoardsMeta();
   const cur = meta.find((b) => b.id === currentBoardId);
-  el.textContent = cur && cur.name ? cur.name : '';
+  const name = cur && cur.name ? cur.name : '';
+  el.textContent = name;
+  el.setAttribute('title', name ? `Renomear quadro: ${name}` : 'Renomear quadro');
+}
+
+function renameCurrentBoard() {
+  if (!currentBoardId) return;
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  if (!cur) return;
+  const newNameRaw = prompt('Renomear quadro:', cur.name || 'Quadro');
+  if (newNameRaw === null) return; // cancelado
+  const newName = newNameRaw.trim();
+  if (!newName || newName === cur.name) return;
+  cur.name = newName;
+  cur.updatedAt = Date.now();
+  saveBoardsMeta(meta);
+  refreshBoardSelect();
+  updateCurrentBoardName();
 }
 
 function findCard(id) {
@@ -455,10 +473,15 @@ function bindUI() {
       const cur = meta.find((b) => b.id === currentBoardId);
       const label = (cur && cur.name) ? cur.name : "quadro";
       const ok = confirm(`Apagar "${label}"? Esta ação não pode ser desfeita.`);
-      if (!ok) return;
-      deleteBoard(currentBoardId);
-      closeMenus();
-    });
+    if (!ok) return;
+    deleteBoard(currentBoardId);
+    closeMenus();
+  });
+  }
+
+  const boardNamePill = document.getElementById('currentBoardName');
+  if (boardNamePill) {
+    boardNamePill.addEventListener('click', renameCurrentBoard);
   }
 }
 
