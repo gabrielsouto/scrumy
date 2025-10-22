@@ -75,6 +75,73 @@ function getBoardNameFromURL() {
   }
 }
 
+// Determine how the current URL encodes the board name
+// Returns: 'path' | 'query' | 'none'
+function getBoardRoutingStyle() {
+  try {
+    const search = window.location.search || "";
+    if (search && search !== "?") {
+      const params = new URLSearchParams(search);
+      const candidates = ["board", "quadro", "nome", "name"]; 
+      for (const key of candidates) {
+        const v = (params.get(key) || "").trim();
+        if (v) return 'query';
+      }
+      // Bare query like ?Sprint%201
+      for (const [k, v] of params.entries()) {
+        const name = (v || "").trim() || (k || "").trim();
+        if (name) return 'query';
+      }
+    }
+    const basePath = new URL('.', document.URL).pathname.replace(/\\+/g, "/");
+    const fullPath = (window.location.pathname || "").replace(/\\+/g, "/");
+    const baseParts = basePath.split('/').filter(Boolean);
+    const fullParts = fullPath.split('/').filter(Boolean);
+    if (fullParts.length > baseParts.length) {
+      const last = fullParts[fullParts.length - 1];
+      if (last && last.toLowerCase() !== 'index.html' && !last.includes('.')) return 'path';
+    }
+    return 'none';
+  } catch {
+    return 'none';
+  }
+}
+
+// Update the URL to reflect the current board name, preserving the existing routing style when possible
+function updateBoardURLForCurrent() {
+  try {
+    if (!currentBoardId) return;
+    const meta = loadBoardsMeta();
+    const cur = meta.find((b) => b.id === currentBoardId);
+    const name = (cur && cur.name) ? cur.name.trim() : '';
+    if (!name) return;
+
+    const style = getBoardRoutingStyle();
+    const hash = window.location.hash || '';
+
+    if (style === 'path') {
+      const basePath = new URL('.', document.URL).pathname;
+      const newPath = basePath.replace(/\\+/g, "/").replace(/\/?$/, '/') + encodeURIComponent(name);
+      const newUrl = newPath + hash;
+      if (window.location.pathname + window.location.hash !== newUrl) {
+        history.replaceState(null, '', newUrl);
+      }
+      return;
+    }
+
+    // default to query style
+    const params = new URLSearchParams(window.location.search || '');
+    // Normalize to 'board' param
+    ['board','quadro','nome','name'].forEach(k => params.delete(k));
+    params.set('board', name);
+    const qs = '?' + params.toString();
+    const newUrl = (window.location.pathname || '/') + qs + hash;
+    if ((window.location.search || '') + (window.location.hash || '') !== qs + hash) {
+      history.replaceState(null, '', newUrl);
+    }
+  } catch {}
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -228,6 +295,8 @@ function renameCurrentBoardInline() {
     saveBoardsMeta(meta);
     refreshBoardSelect();
     updateCurrentBoardName();
+    // Reflect renamed board in URL
+    updateBoardURLForCurrent();
   }
 
   function cancel() {
@@ -286,6 +355,8 @@ function createBoard(name, initialState = []) {
   state = initialState.slice();
   refreshBoardSelect();
   renderBoard();
+  // Reflect created board in URL
+  updateBoardURLForCurrent();
 }
 
 function deleteBoard(id) {
@@ -303,6 +374,8 @@ function deleteBoard(id) {
     state = loadStateForBoard(next);
     refreshBoardSelect();
     renderBoard();
+    // Reflect switched board in URL
+    updateBoardURLForCurrent();
   }
 }
 
@@ -311,6 +384,8 @@ function loadBoard(id) {
   state = loadStateForBoard(id);
   refreshBoardSelect();
   renderBoard();
+  // Reflect selected board in URL
+  updateBoardURLForCurrent();
 }
 
 function saveBoardAs(name) {
