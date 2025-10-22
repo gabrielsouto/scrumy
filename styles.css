@@ -61,8 +61,11 @@ body {
 
 h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; }
-.board-name { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; background: var(--panel-2); cursor: pointer; }
+.board-name { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; background: var(--panel-2); cursor: pointer; }
 .board-name:hover { border-color: var(--primary); color: var(--text); }
+.board-name .edit-icon { opacity: 0; transition: opacity .15s ease-in-out; color: var(--muted); }
+.board-name:hover .edit-icon { opacity: .9; color: var(--text); }
+.board-name-input { font-size: 12px; color: var(--text); background: var(--panel-2); border: 1px solid var(--primary); border-radius: 999px; padding: 4px 8px; outline: none; min-width: 120px; }
 
 .toolbar { display: none; }
 .menu { display: flex; gap: 16px; align-items: center; }

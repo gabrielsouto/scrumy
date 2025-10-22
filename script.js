@@ -116,29 +116,76 @@ function loadStateForBoard(id) {
 }
 
 function updateCurrentBoardName() {
-  const el = document.getElementById('currentBoardName');
-  if (!el) return;
+  const wrapper = document.getElementById('currentBoardName');
+  if (!wrapper) return;
+  const label = wrapper.querySelector('.board-name-label');
   const meta = loadBoardsMeta();
   const cur = meta.find((b) => b.id === currentBoardId);
   const name = cur && cur.name ? cur.name : '';
-  el.textContent = name;
-  el.setAttribute('title', name ? `Renomear quadro: ${name}` : 'Renomear quadro');
+  if (label) label.textContent = name;
+  wrapper.setAttribute('title', name ? `Renomear quadro: ${name}` : 'Renomear quadro');
 }
 
-function renameCurrentBoard() {
+function renameCurrentBoardInline() {
   if (!currentBoardId) return;
   const meta = loadBoardsMeta();
   const cur = meta.find((b) => b.id === currentBoardId);
   if (!cur) return;
-  const newNameRaw = prompt('Renomear quadro:', cur.name || 'Quadro');
-  if (newNameRaw === null) return; // cancelado
-  const newName = newNameRaw.trim();
-  if (!newName || newName === cur.name) return;
-  cur.name = newName;
-  cur.updatedAt = Date.now();
-  saveBoardsMeta(meta);
-  refreshBoardSelect();
-  updateCurrentBoardName();
+
+  const wrapper = document.getElementById('currentBoardName');
+  if (!wrapper) return;
+  const label = wrapper.querySelector('.board-name-label');
+  const icon = wrapper.querySelector('.edit-icon');
+
+  const startName = (cur.name || '');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'board-name-input';
+  input.value = startName;
+  input.setAttribute('aria-label', 'Renomear quadro');
+
+  // Hide label/icon while editing
+  if (label) label.style.display = 'none';
+  if (icon) icon.style.display = 'none';
+  wrapper.appendChild(input);
+  input.focus();
+  input.select();
+
+  function cleanup() {
+    input.removeEventListener('keydown', onKeyDown);
+    input.removeEventListener('blur', onBlur);
+    input.remove();
+    if (label) label.style.display = '';
+    if (icon) icon.style.display = '';
+  }
+
+  function commit() {
+    const newName = (input.value || '').trim();
+    cleanup();
+    if (!newName || newName === startName) {
+      updateCurrentBoardName();
+      return;
+    }
+    cur.name = newName;
+    cur.updatedAt = Date.now();
+    saveBoardsMeta(meta);
+    refreshBoardSelect();
+    updateCurrentBoardName();
+  }
+
+  function cancel() {
+    cleanup();
+    updateCurrentBoardName();
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  }
+  function onBlur() { commit(); }
+
+  input.addEventListener('keydown', onKeyDown);
+  input.addEventListener('blur', onBlur);
 }
 
 function findCard(id) {
@@ -481,7 +528,7 @@ function bindUI() {
 
   const boardNamePill = document.getElementById('currentBoardName');
   if (boardNamePill) {
-    boardNamePill.addEventListener('click', renameCurrentBoard);
+    boardNamePill.addEventListener('click', renameCurrentBoardInline);
   }
 }
 
