@@ -54,6 +54,10 @@ python -m http.server 8000
   O formato aceito é:
   - Objeto: `{ id, name, createdAt, updatedAt, cards: [...] }`, ou
   - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]`.
+ 
+ Exemplo pronto para importar:
+ - `samples/board-receita-bolo-5.json` — quadro “Receita de Bolo - 5 por coluna” com 25 cartões (5 por coluna: backlog, todo, doing, review, done).
+   - Use no app: Exportar → Importar JSON e selecione este arquivo.
 
 ## Quadros
 - Selecionar: use o seletor "Selecionar quadro" na barra superior.

@@ -1,0 +1,37 @@
+{
+  "id": "board-sample-bolo-5-por-coluna",
+  "name": "Receita de Bolo - 5 por coluna",
+  "createdAt": 1700000000000,
+  "updatedAt": 1700000000000,
+  "cards": [
+    { "id": "c-backlog-01", "title": "Escolher sabor do bolo", "description": "Definir sabor principal (chocolate, baunilha, cenoura...).", "status": "backlog", "createdAt": 1700000000000 },
+    { "id": "c-backlog-02", "title": "Restrições alimentares", "description": "Checar se precisa ser sem lactose/sem glúten.", "status": "backlog", "createdAt": 1700000001000 },
+    { "id": "c-backlog-03", "title": "Porções necessárias", "description": "Quantas pessoas vão comer?", "status": "backlog", "createdAt": 1700000002000 },
+    { "id": "c-backlog-04", "title": "Cobertura e recheio", "description": "Escolher cobertura (ganache, brigadeiro, chantilly).", "status": "backlog", "createdAt": 1700000003000 },
+    { "id": "c-backlog-05", "title": "Decoração", "description": "Ideias de decoração simples (granulado, frutas, raspas).", "status": "backlog", "createdAt": 1700000004000 },
+
+    { "id": "c-todo-01", "title": "Comprar ingredientes", "description": "Farinha, açúcar, ovos, manteiga, leite, fermento.", "status": "todo", "createdAt": 1700000005000 },
+    { "id": "c-todo-02", "title": "Preaquecer o forno", "description": "180 ºC por ~10 minutos.", "status": "todo", "createdAt": 1700000006000 },
+    { "id": "c-todo-03", "title": "Untar e enfarinhar a forma", "description": "Usar manteiga/óleo e farinha.", "status": "todo", "createdAt": 1700000007000 },
+    { "id": "c-todo-04", "title": "Organizar bancada", "description": "Separar utensílios e tigelas.", "status": "todo", "createdAt": 1700000008000 },
+    { "id": "c-todo-05", "title": "Higienizar utensílios", "description": "Lavar e secar colheres, fouet, espátulas.", "status": "todo", "createdAt": 1700000009000 },
+
+    { "id": "c-doing-01", "title": "Misturar secos", "description": "Peneirar farinha, açúcar e fermento.", "status": "doing", "createdAt": 1700000010000 },
+    { "id": "c-doing-02", "title": "Bater manteiga e açúcar", "description": "Cremar até ficar fofo e claro.", "status": "doing", "createdAt": 1700000011000 },
+    { "id": "c-doing-03", "title": "Adicionar ovos", "description": "Um a um, batendo entre cada adição.", "status": "doing", "createdAt": 1700000012000 },
+    { "id": "c-doing-04", "title": "Incorporar secos e leite", "description": "Alternando seco/líquido até homogeneizar.", "status": "doing", "createdAt": 1700000013000 },
+    { "id": "c-doing-05", "title": "Levar à forma", "description": "Despejar massa e nivelar.", "status": "doing", "createdAt": 1700000014000 },
+
+    { "id": "c-review-01", "title": "Conferir consistência da massa", "description": "Sem grumos, textura lisa.", "status": "review", "createdAt": 1700000015000 },
+    { "id": "c-review-02", "title": "Checar temperatura do forno", "description": "Estável em 180 ºC.", "status": "review", "createdAt": 1700000016000 },
+    { "id": "c-review-03", "title": "Teste do palito", "description": "Assado quando o palito sai limpo.", "status": "review", "createdAt": 1700000017000 },
+    { "id": "c-review-04", "title": "Resfriar na grade", "description": "Aguardar 10–15 min antes de desenformar.", "status": "review", "createdAt": 1700000018000 },
+    { "id": "c-review-05", "title": "Preparar cobertura", "description": "Ganache/brigadeiro/chantilly conforme escolhido.", "status": "review", "createdAt": 1700000019000 },
+
+    { "id": "c-done-01", "title": "Cobrir o bolo", "description": "Aplicar cobertura de forma uniforme.", "status": "done", "createdAt": 1700000020000 },
+    { "id": "c-done-02", "title": "Decorar", "description": "Finalizar com granulado/frutas/raspas.", "status": "done", "createdAt": 1700000021000 },
+    { "id": "c-done-03", "title": "Limpar a cozinha", "description": "Lavar utensílios e organizar.", "status": "done", "createdAt": 1700000022000 },
+    { "id": "c-done-04", "title": "Fotografar o resultado", "description": "Registrar a receita pronta.", "status": "done", "createdAt": 1700000023000 },
+    { "id": "c-done-05", "title": "Anotar observações", "description": "Tempo, ajustes e dicas para a próxima.", "status": "done", "createdAt": 1700000024000 }
+  ]
+}
