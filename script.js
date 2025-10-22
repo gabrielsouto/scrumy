@@ -129,16 +129,20 @@ function updateBoardURLForCurrent() {
       return;
     }
 
-    // default to query style
-    const params = new URLSearchParams(window.location.search || '');
-    // Normalize to 'board' param
-    ['board','quadro','nome','name'].forEach(k => params.delete(k));
-    params.set('board', name);
-    const qs = '?' + params.toString();
-    const newUrl = (window.location.pathname || '/') + qs + hash;
-    if ((window.location.search || '') + (window.location.hash || '') !== qs + hash) {
-      history.replaceState(null, '', newUrl);
+    // If current style is query, update ?board=...
+    if (style === 'query') {
+      const params = new URLSearchParams(window.location.search || '');
+      // Normalize to 'board' param
+      ['board','quadro','nome','name'].forEach(k => params.delete(k));
+      params.set('board', name);
+      const qs = '?' + params.toString();
+      const newUrl = (window.location.pathname || '/') + qs + hash;
+      if ((window.location.search || '') + (window.location.hash || '') !== qs + hash) {
+        history.replaceState(null, '', newUrl);
+      }
+      return;
     }
+    // style === 'none': keep root clean; do not modify URL
   } catch {}
 }
 
