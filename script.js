@@ -18,6 +18,63 @@ function uid() {
   return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// Try to read a board name from the URL.
+// Supports:
+//  - ?board=Nome
+//  - ?quadro=Nome
+//  - ?nome=Nome
+//  - ?name=Nome
+//  - ?Nome%20Direto (bare key without '=')
+function getBoardNameFromURL() {
+  try {
+    const search = window.location.search || "";
+    if (search && search !== "?") {
+      const params = new URLSearchParams(search);
+      const candidates = ["board", "quadro", "nome", "name"]; 
+      for (const key of candidates) {
+        const v = (params.get(key) || "").trim();
+        if (v) return v;
+      }
+      // Fallback: handle bare query like ?Sprint%201
+      // URLSearchParams will treat it as a key with empty value
+      // e.g., entries(): [["Sprint 1", ""]]
+      for (const [k, v] of params.entries()) {
+        const name = (v || "").trim() || (k || "").trim();
+        if (name) return name;
+      }
+      // As a last resort, try manual decode of the whole query sans '?'
+      const raw = decodeURIComponent(search.replace(/^\?+/, "")).replace(/\+/g, " ").trim();
+      if (raw) return raw;
+    }
+
+    // If current URL is exactly the app root directory, do not infer name from path
+    const __basePath = new URL('.', document.URL).pathname.replace(/\\+/g, "/");
+    const __fullPath = (window.location.pathname || "").replace(/\\+/g, "/");
+    const __baseParts = __basePath.split("/").filter(Boolean);
+    const __fullParts = __fullPath.split("/").filter(Boolean);
+    if (__fullParts.length <= __baseParts.length) {
+      return "";
+    }
+
+    // No query string; try to read the last non-file path segment
+    const path = (window.location.pathname || "").replace(/\/+/g, "/");
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length > 0) {
+      let last = parts[parts.length - 1];
+      // Ignore common file names
+      if (last.toLowerCase() === "index.html") return "";
+      // Ignore paths that look like files (contain a dot)
+      if (last.includes(".")) return "";
+      try { last = decodeURIComponent(last); } catch {}
+      last = last.replace(/\+/g, " ").trim();
+      if (last) return last;
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -548,6 +605,25 @@ function maybeSeed() {
 function init() {
   // Theme first to avoid FOUC between dark/light
   applyTheme(getInitialTheme());
+
+  // If a name is provided via URL, create/select that board immediately
+  const requestedName = getBoardNameFromURL();
+  if (requestedName) {
+    const metaNow = loadBoardsMeta();
+    const existing = metaNow.find((b) => (b.name || "").toLowerCase() === requestedName.toLowerCase());
+    if (existing) {
+      setCurrentBoardId(existing.id);
+      state = loadStateForBoard(existing.id);
+      refreshBoardSelect();
+    } else {
+      // Create empty board with the requested name
+      createBoard(requestedName, []);
+    }
+    bindUI();
+    setupDnD();
+    renderBoard();
+    return;
+  }
 
   let meta = loadBoardsMeta();
   let curId = getCurrentBoardId();

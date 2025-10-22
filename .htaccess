@@ -1,0 +1,13 @@
+Options -MultiViews
+DirectoryIndex index.html
+
+RewriteEngine On
+
+# Serve existing files/directories as-is
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Fall back everything else to index.html (SPA routing)
+RewriteRule ^ index.html [L]
+

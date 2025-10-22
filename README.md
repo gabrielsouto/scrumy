@@ -68,6 +68,31 @@ python -m http.server 8000
 - Apagar: clique em "Apagar Quadro" e confirme. Se apagar o último quadro existente, um quadro vazio "Quadro 1" é criado automaticamente para continuar usando o app.
  - Renomear: clique no nome do quadro exibido ao lado do logo para editar inline (Enter salva; Esc cancela; sair do campo também salva).
 
+## Acessar quadro via URL
+Você pode abrir/criar um quadro informando o nome pela URL.
+
+- Por query string (funciona em qualquer servidor):
+  - `?board=Projeto%20X`
+  - `?quadro=Sprint%201`
+  - `?nome=Roadmap`
+  - `?name=Kanban`
+  - Também aceita uma query “nua”: `?Meu%20Quadro` (sem `=`)
+
+- Por caminho (requer rewrite para SPA):
+  - `/scrumy/Meu%20Quadro`
+  - Ex.: `http://localhost/dreamhost/gbrl.com.br/scrumy/Quadro%20padr%C3%A3o`
+
+Comportamento:
+- Se já existir um quadro com esse nome (case‑insensitive), ele será selecionado.
+- Se não existir, será criado vazio.
+- Acessar somente a raiz do app (ex.: `/scrumy/`) não cria nenhum quadro automaticamente.
+- A comparação respeita acentuação ("padrao" ≠ "padrão").
+
+Rewrite (Apache):
+- Habilite `mod_rewrite` e `AllowOverride All` no diretório do app.
+- O repo inclui um `.htaccess` que redireciona rotas para `index.html`, mantendo arquivos/pastas reais.
+  - Isso evita 404 ao acessar `/scrumy/<nome-do-quadro>` diretamente.
+
 ## Exportar imagem
 - Botão: “Exportar imagem”.
 - Captura a página (header + board) e baixa um arquivo como `scrumy-YYYYMMDD-HHMMSS.png`.
