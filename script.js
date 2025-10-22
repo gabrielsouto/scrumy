@@ -396,6 +396,25 @@ function bindUI() {
     exportBtn.addEventListener("click", exportBoardImage);
   }
 
+  const exportJsonBtn = document.getElementById("exportJsonBtn");
+  if (exportJsonBtn) {
+    exportJsonBtn.addEventListener("click", exportBoardJson);
+  }
+
+  const importJsonBtn = document.getElementById("importJsonBtn");
+  const importJsonInput = document.getElementById("importJsonInput");
+  if (importJsonBtn && importJsonInput) {
+    importJsonBtn.addEventListener("click", () => {
+      // open file picker
+      importJsonInput.value = "";
+      importJsonInput.click();
+    });
+    importJsonInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) importBoardJsonFile(file);
+    });
+  }
+
   const boardSelect = document.getElementById("boardSelect");
   if (boardSelect) {
     boardSelect.addEventListener("change", (e) => {
@@ -532,6 +551,95 @@ async function exportBoardImage() {
     console.error("Falha ao exportar imagem:", err);
     alert("Não foi possível gerar a imagem do quadro.");
   }
+}
+
+// Export current board as JSON
+function exportBoardJson() {
+  try {
+    if (!currentBoardId) {
+      alert("Nenhum quadro selecionado.");
+      return;
+    }
+    const meta = loadBoardsMeta();
+    const cur = meta.find((b) => b.id === currentBoardId) || {};
+    const payload = {
+      id: currentBoardId,
+      name: cur.name || "Quadro",
+      createdAt: cur.createdAt || null,
+      updatedAt: cur.updatedAt || null,
+      cards: state
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const slug = (cur.name || "quadro")
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'quadro';
+    const fileName = `scrumy-${slug}-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    if (typeof closeMenus === 'function') closeMenus();
+  } catch (err) {
+    console.error('Falha ao exportar JSON:', err);
+    alert('Não foi possível exportar JSON do quadro.');
+  }
+}
+
+// Import from selected JSON file
+function importBoardJsonFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = reader.result;
+      const data = JSON.parse(text);
+      let cards = [];
+      let name = '';
+      if (data && Array.isArray(data.cards)) {
+        cards = data.cards;
+        name = data.name || '';
+      } else if (Array.isArray(data)) {
+        cards = data;
+      } else {
+        throw new Error('Formato de JSON inválido.');
+      }
+      // Normalize cards
+      const validStatuses = new Set(STATUSES.map(s => s.key));
+      const normalized = (cards || []).map((c) => {
+        const id = c && typeof c.id === 'string' && c.id ? c.id : uid();
+        const title = c && typeof c.title === 'string' ? c.title : '';
+        const description = c && typeof c.description === 'string' ? c.description : '';
+        const status = c && typeof c.status === 'string' && validStatuses.has(c.status) ? c.status : 'backlog';
+        const createdAt = (c && typeof c.createdAt === 'number') ? c.createdAt : Date.now();
+        return { id, title, description, status, createdAt };
+      });
+      const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
+      if (asNew) {
+        createBoard(name || 'Importado', normalized);
+      } else {
+        state = normalized;
+        saveState();
+        renderBoard();
+      }
+      if (typeof closeMenus === 'function') closeMenus();
+      alert('Importação concluída.');
+    } catch (err) {
+      console.error('Falha ao importar JSON:', err);
+      alert('Falha ao importar JSON. Verifique o arquivo e tente novamente.');
+    }
+  };
+  reader.onerror = () => {
+    alert('Não foi possível ler o arquivo selecionado.');
+  };
+  reader.readAsText(file);
 }
 
 document.addEventListener("DOMContentLoaded", init);

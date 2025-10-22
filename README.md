@@ -12,6 +12,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Persistência automática no navegador via `localStorage`.
 - Tema claro/escuro com alternância na toolbar e preferência salva.
 - Exportar imagem (PNG) da página (header + board) com timestamp.
+- Exportar/Importar JSON do quadro (backup/restauração).
 - Limpar quadro (apaga todos os cartões).
 - Nome do quadro atual exibido ao lado do logo.
 - Layout responsivo com colunas dinâmicas (auto‑fit, sem scroll horizontal).
@@ -22,7 +23,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 2. Menu superior (cabeçalho fixo):
    - Quadros: Selecionar quadro | Novo Quadro | Salvar como | Apagar Quadro.
    - Tarefas: Nova tarefa | Limpar quadro.
-   - Exportar: Exportar imagem (PNG do header + board).
+   - Exportar: Exportar imagem (PNG do header + board) | Exportar JSON | Importar JSON.
    - Tema: botão à direita alterna entre claro/escuro.
 3. Em cada cartão:
    - ✎ Editar: abre o modal com os dados do cartão.
@@ -45,6 +46,15 @@ python -m http.server 8000
 - Migração automática: se houver dados antigos em `scrumy.board.v1`, eles são movidos para um quadro padrão "Quadro 1" na primeira carga.
 - Os dados ficam no navegador atual (por máquina/perfil). Limpar dados do site apaga o quadro.
 
+## Exportar/Importar JSON
+- Exportar JSON (quadro atual): baixa um arquivo `.json` contendo o nome/metadados e os cartões do quadro atual.
+- Importar JSON: selecione um arquivo exportado. Você pode:
+  - Criar um novo quadro com os cartões importados (recomendado);
+  - Ou substituir o conteúdo do quadro atual.
+  O formato aceito é:
+  - Objeto: `{ id, name, createdAt, updatedAt, cards: [...] }`, ou
+  - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]`.
+
 ## Quadros
 - Selecionar: use o seletor "Selecionar quadro" na barra superior.
 - Criar novo: clique em "Novo Quadro" e informe o nome. O quadro inicia vazio.
@@ -62,9 +72,9 @@ python -m http.server 8000
 - Implementado com variáveis CSS (`:root` e `:root[data-theme="light"]`).
 
 ## Estrutura do projeto
-- `index.html` — marcação da aplicação e toolbar.
+- `index.html` — marcação da aplicação e cabeçalho fixo com menus.
 - `styles.css` — estilos, temas e responsividade.
-- `script.js` — lógica do board (estado, renderização, DnD, modal, storage, tema, exportação de imagem).
+- `script.js` — lógica do board (estado, renderização, DnD, modal, storage, tema, exportação de imagem e exportação/importação JSON).
 - `vendor/html2canvas.min.js` — biblioteca para captura da imagem (sem dependências externas em runtime).
 
 ## Navegadores
@@ -80,7 +90,6 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 - Sem colaboração em tempo real: uso é individual no dispositivo atual.
 - Limpar dados do site/apagar `localStorage` remove quadros e cartões.
 - Exportação de imagem é um snapshot estático (não inclui interações/menus abertos).
-- Não há importação/exportação de JSON (pode ser adicionada futuramente).
 
 ## Links
 - Site: https://scrumy.com.br/
