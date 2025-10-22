@@ -37,7 +37,6 @@ Você pode simplesmente abrir o `index.html`. Se preferir um servidor local:
 
 ```bash
 python -m http.server 8000
-# Acesse: http://localhost:8000
 ```
 
 ## Persistência de dados
@@ -79,19 +78,19 @@ Você pode abrir/criar um quadro informando o nome pela URL.
   - Também aceita uma query “nua”: `?Meu%20Quadro` (sem `=`)
 
 - Por caminho (requer rewrite para SPA):
-  - `/scrumy/Meu%20Quadro`
-  - Ex.: `http://localhost/dreamhost/gbrl.com.br/scrumy/Quadro%20padr%C3%A3o`
+  - `/<nome-do-quadro>`
+  - Ex.: `https://scrumy.com.br/Quadro%20padr%C3%A3o`
 
 Comportamento:
 - Se já existir um quadro com esse nome (case‑insensitive), ele será selecionado.
 - Se não existir, será criado vazio.
-- Acessar somente a raiz do app (ex.: `/scrumy/`) não cria nenhum quadro automaticamente.
+- Acessar somente a raiz do app (ex.: `/` ou `https://scrumy.com.br/`) não cria nenhum quadro automaticamente.
 - A comparação respeita acentuação ("padrao" ≠ "padrão").
 
 Rewrite (Apache):
 - Habilite `mod_rewrite` e `AllowOverride All` no diretório do app.
 - O repo inclui um `.htaccess` que redireciona rotas para `index.html`, mantendo arquivos/pastas reais.
-  - Isso evita 404 ao acessar `/scrumy/<nome-do-quadro>` diretamente.
+  - Isso evita 404 ao acessar `/<nome-do-quadro>` (ex.: `https://scrumy.com.br/Meu%20Quadro`) diretamente.
 
 ## Exportar imagem
 - Botão: “Exportar imagem”.
