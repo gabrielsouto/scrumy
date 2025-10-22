@@ -83,5 +83,6 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 - Não há importação/exportação de JSON (pode ser adicionada futuramente).
 
 ## Links
+- Site: https://scrumy.com.br/
 - GitHub: https://github.com/gabrielsouto/scrumy
 - YouTube: https://www.youtube.com/GabrielSouto
