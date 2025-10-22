@@ -8,17 +8,46 @@
   </head>
   <body>
     <header class="app-header">
-      <h1>Scrumy</h1>
-      <div class="toolbar">
-        <select id="boardSelect" class="select" aria-label="Selecionar quadro"></select>
-        <button id="newBoardBtn" class="btn" title="Criar novo quadro">Novo Quadro</button>
-        <button id="saveBoardAsBtn" class="btn" title="Salvar quadro atual como">Salvar como</button>
-        <button id="deleteBoardBtn" class="btn" title="Apagar quadro atual">Apagar Quadro</button>
-        <button id="themeToggleBtn" class="btn" aria-pressed="false" title="Alternar tema">Tema: Escuro</button>
-        <button id="addCardBtn" class="btn primary">Nova tarefa</button>
-        <button id="exportImgBtn" class="btn" title="Exportar imagem do quadro">Exportar imagem</button>
-        <button id="clearBoardBtn" class="btn">Limpar quadro</button>
-      </div>
+      <div class="brand"><h1>Scrumy</h1><span id="currentBoardName" class="board-name" aria-live="polite"></span></div>
+      <nav class="menu" aria-label="Menu principal">
+        <div class="menu-item">
+          <button id="menuBoardsBtn" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Quadros</button>
+          <div id="menuBoards" class="menu-dropdown" role="menu" aria-label="Quadros">
+            <label class="menu-field">
+              <span>Selecionar quadro</span>
+              <select id="boardSelect" class="select" aria-label="Selecionar quadro"></select>
+            </label>
+            <div class="menu-actions">
+              <button id="newBoardBtn" class="btn" title="Criar novo quadro">Novo Quadro</button>
+              <button id="saveBoardAsBtn" class="btn" title="Salvar quadro atual como">Salvar como</button>
+              <button id="deleteBoardBtn" class="btn danger" title="Apagar quadro atual">Apagar Quadro</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-item">
+          <button id="menuTasksBtn" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Tarefas</button>
+          <div id="menuTasks" class="menu-dropdown" role="menu" aria-label="Tarefas">
+            <div class="menu-actions">
+              <button id="addCardBtn" class="btn primary">Nova tarefa</button>
+              <button id="clearBoardBtn" class="btn">Limpar quadro</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-item">
+          <button id="menuExportBtn" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Exportar</button>
+          <div id="menuExport" class="menu-dropdown" role="menu" aria-label="Exportar">
+            <div class="menu-actions">
+              <button id="exportImgBtn" class="btn" title="Exportar imagem do quadro">Exportar imagem</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-item">
+          <button id="themeToggleBtn" class="menu-trigger" aria-pressed="false" title="Alternar tema">Tema: Escuro</button>
+        </div>
+      </nav>
     </header>
 
     <main class="board" id="board">

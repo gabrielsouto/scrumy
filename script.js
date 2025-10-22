@@ -72,6 +72,15 @@ function toggleTheme() {
   applyTheme(next);
 }
 
+// Global helper to close any open header menus
+function closeMenus() {
+  document.querySelectorAll('.menu-item.open').forEach((item) => {
+    item.classList.remove('open');
+    const btn = item.querySelector('.menu-trigger');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  });
+}
+
 // Boards management helpers
 function boardKey(id) { return BOARD_STATE_PREFIX + id; }
 
@@ -94,6 +103,7 @@ function getCurrentBoardId() {
 function setCurrentBoardId(id) {
   currentBoardId = id;
   try { localStorage.setItem(CURRENT_BOARD_KEY, id); } catch {}
+  updateCurrentBoardName();
 }
 
 function loadStateForBoard(id) {
@@ -103,6 +113,14 @@ function loadStateForBoard(id) {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch { return []; }
+}
+
+function updateCurrentBoardName() {
+  const el = document.getElementById('currentBoardName');
+  if (!el) return;
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  el.textContent = cur && cur.name ? cur.name : '';
 }
 
 function findCard(id) {
@@ -293,6 +311,40 @@ function closeModal() {
 }
 
 function bindUI() {
+  // Menu toggles
+  (function setupMenus() {
+    const items = [
+      { btnId: "menuBoardsBtn", panelId: "menuBoards" },
+      { btnId: "menuTasksBtn", panelId: "menuTasks" },
+      { btnId: "menuExportBtn", panelId: "menuExport" },
+    ];
+    const entries = items.map(({ btnId, panelId }) => {
+      const btn = document.getElementById(btnId);
+      const panel = document.getElementById(panelId);
+      const container = btn ? btn.parentElement : null;
+      return { btn, panel, container };
+    }).filter(x => x.btn && x.panel && x.container);
+
+    entries.forEach(({ btn, container }) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = container.classList.contains("open");
+        closeMenus();
+        if (!isOpen) {
+          container.classList.add("open");
+          btn.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      // Do not close if the click happened inside the menu/nav
+      if (e.target && e.target.closest && e.target.closest('.menu')) return;
+      closeMenus();
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
+  })();
+
   document.getElementById("addCardBtn").addEventListener("click", () => openModal());
   document.getElementById("cancelBtn").addEventListener("click", () => closeModal());
   document.getElementById("modal").addEventListener("click", (e) => {
@@ -305,6 +357,8 @@ function bindUI() {
     state = [];
     saveState();
     renderBoard();
+    // Fechar menus após ação de limpar
+    if (typeof closeMenus === 'function') closeMenus();
   });
 
   const form = document.getElementById("cardForm");
@@ -349,6 +403,8 @@ function bindUI() {
       if (targetId && targetId !== currentBoardId) {
         loadBoard(targetId);
       }
+      // Fechar o menu após selecionar um quadro
+      closeMenus();
     });
   }
 
@@ -358,6 +414,7 @@ function bindUI() {
       const name = prompt("Nome do novo quadro:", "Novo Quadro");
       if (name === null) return;
       createBoard(name.trim() || "Novo Quadro", []);
+      closeMenus();
     });
   }
 
@@ -367,6 +424,7 @@ function bindUI() {
       const name = prompt("Salvar quadro como:", "Cópia do Quadro");
       if (name === null) return;
       saveBoardAs(name.trim() || "Cópia do Quadro");
+      closeMenus();
     });
   }
 
@@ -380,6 +438,7 @@ function bindUI() {
       const ok = confirm(`Apagar "${label}"? Esta ação não pode ser desfeita.`);
       if (!ok) return;
       deleteBoard(currentBoardId);
+      closeMenus();
     });
   }
 }
@@ -425,7 +484,7 @@ function init() {
       curId = meta[0].id;
       setCurrentBoardId(curId);
     } else {
-      currentBoardId = curId;
+      setCurrentBoardId(curId);
     }
     state = loadStateForBoard(curId);
     refreshBoardSelect();
@@ -442,6 +501,8 @@ function init() {
 // Export board as image (PNG)
 async function exportBoardImage() {
   try {
+    // Close any open menus so they don't appear in the capture
+    if (typeof closeMenus === 'function') closeMenus();
     const target = document.body; // capture header + board
     if (!window.html2canvas) {
       alert("Ferramenta de captura indisponível.");
