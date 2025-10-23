@@ -155,7 +155,7 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 }
 
 /* História (story) inline notes */
-.story-notes { padding: 12px; }
+.story-notes { padding: 12px; position: relative; }
 .story-editor {
   background: var(--panel-2);
   color: var(--text);
@@ -170,6 +170,31 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
   content: attr(data-placeholder);
   color: var(--muted);
 }
+
+/* Add-card button in História column */
+.story-add-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 14px;
+  padding: 0;
+  cursor: pointer;
+}
+.story-add-btn:hover { background: var(--hover-2); color: var(--text); }
+.story-add-btn:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Hide add button on export */
+.no-shadow-export .story-add-btn { display: none !important; }
 
 .column {
   background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.005));

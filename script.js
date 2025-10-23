@@ -416,6 +416,16 @@ function renderBoard() {
       if (status.key === 'story') {
         const wrap = document.createElement('div');
         wrap.className = 'story-notes';
+        const addBtn = document.createElement('button');
+        addBtn.className = 'story-add-btn';
+        addBtn.title = 'Nova tarefa desta linha';
+        addBtn.setAttribute('aria-label', 'Nova tarefa desta linha');
+        addBtn.textContent = '+';
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openModal({ mode: 'create', lane: laneIndex });
+        });
+
         const editor = document.createElement('div');
         editor.className = 'story-editor';
         editor.setAttribute('contenteditable', 'true');
@@ -432,6 +442,7 @@ function renderBoard() {
           saveTimer = setTimeout(commit, 400);
         });
         editor.addEventListener('blur', commit);
+        wrap.appendChild(addBtn);
         wrap.appendChild(editor);
         section.appendChild(wrap);
       } else {
@@ -636,7 +647,7 @@ function setupDnD() {
   });
 }
 
-function openModal({ mode, card } = { mode: "create" }) {
+function openModal({ mode, card, lane } = { mode: "create" }) {
   const modal = document.getElementById("modal");
   const titleEl = document.getElementById("modalTitle");
   const idEl = document.getElementById("cardId");
@@ -678,6 +689,13 @@ function openModal({ mode, card } = { mode: "create" }) {
     if (def) def.checked = true;
   }
 
+  // For new cards, remember target lane (defaults to 0)
+  if ((!card || !card.id) && typeof lane !== 'undefined') {
+    modal.dataset.createLane = String(Math.max(0, Math.floor(lane)));
+  } else {
+    delete modal.dataset.createLane;
+  }
+
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   titleInput.focus();
@@ -687,6 +705,7 @@ function closeModal() {
   const modal = document.getElementById("modal");
   modal.classList.add("hidden");
   modal.setAttribute("aria-hidden", "true");
+  delete modal.dataset.createLane;
 }
 
 function bindUI() {
@@ -765,7 +784,9 @@ function bindUI() {
         existing.color = color;
       }
     } else {
-      state.push({ id: uid(), title, description, observation, status, color, lane: 0, createdAt: Date.now() });
+      const laneStr = document.getElementById('modal').dataset.createLane || '0';
+      const laneIndex = parseInt(laneStr, 10) || 0;
+      state.push({ id: uid(), title, description, observation, status, color, lane: laneIndex, createdAt: Date.now() });
     }
 
     saveState();

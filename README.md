@@ -5,6 +5,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 ## Funcionalidades
 - 1 coluna especial + 5 de fluxo: História (anotações), Backlog, A Fazer, Fazendo, Revisão, Concluído.
 - Notas por linha na coluna História: edição inline (contenteditable), com salvamento automático.
+  - Botão "+" na História: cria uma nova tarefa diretamente naquela linha.
 - Múltiplas linhas (swimlanes): adicionar/remover linha em Tarefas; “Limpar quadro” mantém 1 linha.
 - Múltiplos quadros: selecionar, criar, duplicar (Salvar como) e apagar.
 - Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Exportar).
@@ -33,7 +34,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
    - ✎ (canto superior direito) Editar.
    - × (canto superior direito) Excluir (com confirmação).
 4. Arraste cartões entre colunas/linhas para alterar status/linha. Observação: não é possível soltar na coluna História.
-5. Coluna História: clique no campo para escrever notas da linha; salva automaticamente.
+5. Coluna História: clique no campo para escrever notas da linha; salva automaticamente. Use o botão "+" (no canto da História) para criar uma nova tarefa diretamente nessa linha.
 
 ## Executar localmente (opcional)
 Você pode simplesmente abrir o `index.html`. Se preferir um servidor local:
@@ -122,6 +123,7 @@ Rewrite (Apache):
 - Botão: “Exportar imagem”.
 - Captura a página (header + board) e baixa um arquivo como `scrumy-YYYYMMDD-HHMMSS.png`.
 - Durante a captura, sombras (cards/colunas/header/footer) e gradientes de fundo são temporariamente desativados para evitar halos na imagem.
+- Durante a captura, os botões de ação dos cards (✎ e ×) e o botão "+" da coluna História ficam ocultos.
 - Implementado com `html2canvas` vendorizado em `vendor/html2canvas.min.js`.
 
 ## Tema claro/escuro
