@@ -80,6 +80,7 @@ python -m http.server 8000
     }
     ```
   - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]` (campos ausentes são normalizados; `status: "story"` é convertido para `backlog`).
+  - Ao substituir o quadro atual durante a importação, os valores de `lanes` e `storyNotes` do arquivo importado passam a valer no quadro e todas as linhas são renderizadas corretamente.
  
  Exemplo pronto para importar:
 - `samples/board-receita-bolo.json` — quadro “Receita de Bolo” com 2 linhas (lanes) e cartões distribuídos entre backlog, todo, doing, review e done.

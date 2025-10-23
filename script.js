@@ -1092,11 +1092,12 @@ function importBoardJsonFile(file) {
       if (asNew) {
         createBoard(name || 'Importado', normalized, lanes, storyNotes);
       } else {
+        // When replacing current board, update lanes and story notes BEFORE rendering
+        setLanesCount(lanes);
+        setStoryNotes(storyNotes);
         state = normalized;
         saveState();
         renderBoard();
-        setLanesCount(lanes);
-        setStoryNotes(storyNotes);
       }
       if (typeof closeMenus === 'function') closeMenus();
       alert('Importação concluída.');
