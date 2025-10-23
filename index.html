@@ -43,6 +43,8 @@
             <div class="menu-actions">
               <button id="addCardBtn" class="btn primary">Nova tarefa</button>
               <button id="clearBoardBtn" class="btn">Limpar quadro</button>
+              <button id="addLaneBtn" class="btn">Nova linha</button>
+              <button id="removeLaneBtn" class="btn danger">Remover linha</button>
             </div>
           </div>
         </div>
@@ -65,28 +67,7 @@
       </nav>
     </header>
 
-    <main class="board" id="board">
-      <section class="column" aria-label="Backlog">
-        <h2>Backlog</h2>
-        <div class="column-cards" data-status="backlog"></div>
-      </section>
-      <section class="column" aria-label="A Fazer">
-        <h2>A Fazer</h2>
-        <div class="column-cards" data-status="todo"></div>
-      </section>
-      <section class="column" aria-label="Fazendo">
-        <h2>Fazendo</h2>
-        <div class="column-cards" data-status="doing"></div>
-      </section>
-      <section class="column" aria-label="Revisão">
-        <h2>Revisão</h2>
-        <div class="column-cards" data-status="review"></div>
-      </section>
-      <section class="column" aria-label="Concluído">
-        <h2>Concluído</h2>
-        <div class="column-cards" data-status="done"></div>
-      </section>
-    </main>
+    <main class="board" id="board"></main>
 
     <footer class="app-footer">
       <span class="footer-item">
@@ -126,14 +107,49 @@
             <textarea id="descInput" rows="4" placeholder="Detalhes, critérios de aceite, etc."></textarea>
           </label>
           <label class="field">
+            <span>Observação</span>
+            <textarea id="obsInput" rows="2" placeholder="Anotações breves, links, etc."></textarea>
+          </label>
+          <label class="field">
             <span>Status</span>
             <select id="statusSelect">
+              <option value="story" disabled>História</option>
               <option value="backlog">Backlog</option>
               <option value="todo">A Fazer</option>
               <option value="doing">Fazendo</option>
               <option value="review">Revisão</option>
               <option value="done">Concluído</option>
             </select>
+          </label>
+          <label class="field">
+            <span>Cor</span>
+            <div class="color-options" id="colorOptions">
+              <label class="color-option">
+                <input type="radio" name="color" value="yellow" />
+                <span class="swatch swatch-yellow" aria-hidden="true"></span>
+                <span>Amarelo</span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="color" value="blue" />
+                <span class="swatch swatch-blue" aria-hidden="true"></span>
+                <span>Azul</span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="color" value="red" />
+                <span class="swatch swatch-red" aria-hidden="true"></span>
+                <span>Vermelho</span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="color" value="green" />
+                <span class="swatch swatch-green" aria-hidden="true"></span>
+                <span>Verde</span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="color" value="gray" />
+                <span class="swatch swatch-gray" aria-hidden="true"></span>
+                <span>Cinza</span>
+              </label>
+            </div>
           </label>
           <div class="modal-actions">
             <button type="button" class="btn" id="cancelBtn">Cancelar</button>

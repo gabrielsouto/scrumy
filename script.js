@@ -4,6 +4,7 @@ const BOARDS_META_KEY = "scrumy.boards.meta.v1";
 const CURRENT_BOARD_KEY = "scrumy.current.boardId.v1";
 const BOARD_STATE_PREFIX = "scrumy.board.v1."; // per-board state: scrumy.board.v1.<id>
 const STATUSES = [
+  { key: "story", label: "História" },
   { key: "backlog", label: "Backlog" },
   { key: "todo", label: "A Fazer" },
   { key: "doing", label: "Fazendo" },
@@ -13,6 +14,7 @@ const STATUSES = [
 
 let state = [];
 let currentBoardId = null;
+// lanes are stored per-board in meta as `lanes` (number)
 
 function uid() {
   return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -234,6 +236,77 @@ function setCurrentBoardId(id) {
   updateCurrentBoardName();
 }
 
+function getLanesCount() {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  const lanes = cur && typeof cur.lanes === 'number' && cur.lanes > 0 ? cur.lanes : 1;
+  return lanes;
+}
+
+function setLanesCount(n) {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  if (!cur) return;
+  const lanes = Math.max(1, Math.floor(n || 1));
+  cur.lanes = lanes;
+  cur.updatedAt = Date.now();
+  // adjust story notes length to lanes
+  if (!Array.isArray(cur.storyNotes)) cur.storyNotes = [];
+  if (cur.storyNotes.length < lanes) {
+    while (cur.storyNotes.length < lanes) cur.storyNotes.push("");
+  } else if (cur.storyNotes.length > lanes) {
+    cur.storyNotes = cur.storyNotes.slice(0, lanes);
+  }
+  saveBoardsMeta(meta);
+}
+
+// Show/Hide lane controls according to current lanes count
+function updateLaneButtonsVisibility() {
+  const btn = document.getElementById('removeLaneBtn');
+  if (!btn) return;
+  const lanes = getLanesCount();
+  btn.style.display = (lanes <= 1) ? 'none' : '';
+}
+
+function getStoryNotes() {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId) || {};
+  const lanes = getLanesCount();
+  let notes = Array.isArray(cur.storyNotes) ? cur.storyNotes.slice() : [];
+  if (notes.length < lanes) {
+    while (notes.length < lanes) notes.push("");
+  } else if (notes.length > lanes) {
+    notes = notes.slice(0, lanes);
+  }
+  return notes;
+}
+
+function setStoryNote(laneIndex, text) {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  if (!cur) return;
+  const lanes = getLanesCount();
+  const idx = Math.max(0, Math.min(lanes - 1, Math.floor(laneIndex || 0)));
+  if (!Array.isArray(cur.storyNotes)) cur.storyNotes = [];
+  while (cur.storyNotes.length < lanes) cur.storyNotes.push("");
+  cur.storyNotes[idx] = String(text || "");
+  cur.updatedAt = Date.now();
+  saveBoardsMeta(meta);
+}
+
+function setStoryNotes(allNotes) {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  if (!cur) return;
+  const lanes = getLanesCount();
+  const incoming = Array.isArray(allNotes) ? allNotes : [];
+  const sanitized = [];
+  for (let i = 0; i < lanes; i++) sanitized.push(String(incoming[i] || ""));
+  cur.storyNotes = sanitized;
+  cur.updatedAt = Date.now();
+  saveBoardsMeta(meta);
+}
+
 function loadStateForBoard(id) {
   try {
     const raw = localStorage.getItem(boardKey(id));
@@ -323,14 +396,63 @@ function findCard(id) {
 }
 
 function renderBoard() {
-  document.querySelectorAll(".column-cards").forEach((col) => (col.innerHTML = ""));
-  for (const status of STATUSES) {
-    const container = document.querySelector(`.column-cards[data-status="${status.key}"]`);
-    const cards = state.filter((c) => c.status === status.key);
-    for (const card of cards) {
-      container.appendChild(renderCard(card));
+  const board = document.getElementById('board');
+  if (!board) return;
+  board.innerHTML = '';
+  const lanes = getLanesCount();
+  const notes = getStoryNotes();
+  for (let laneIndex = 0; laneIndex < lanes; laneIndex++) {
+    const laneEl = document.createElement('div');
+    laneEl.className = 'lane';
+    for (const status of STATUSES) {
+      const section = document.createElement('section');
+      section.className = 'column';
+      section.setAttribute('aria-label', status.label);
+
+      const h2 = document.createElement('h2');
+      h2.textContent = status.label;
+      section.appendChild(h2);
+
+      if (status.key === 'story') {
+        const wrap = document.createElement('div');
+        wrap.className = 'story-notes';
+        const editor = document.createElement('div');
+        editor.className = 'story-editor';
+        editor.setAttribute('contenteditable', 'true');
+        editor.dataset.lane = String(laneIndex);
+        editor.setAttribute('data-placeholder', 'Escreva a história desta linha...');
+        editor.textContent = notes[laneIndex] || '';
+        let saveTimer = null;
+        const commit = () => {
+          const text = editor.textContent || '';
+          setStoryNote(laneIndex, text);
+        };
+        editor.addEventListener('input', () => {
+          if (saveTimer) clearTimeout(saveTimer);
+          saveTimer = setTimeout(commit, 400);
+        });
+        editor.addEventListener('blur', commit);
+        wrap.appendChild(editor);
+        section.appendChild(wrap);
+      } else {
+        const container = document.createElement('div');
+        container.className = 'column-cards';
+        container.dataset.status = status.key;
+        container.dataset.lane = String(laneIndex);
+
+        const cards = state.filter((c) => (c.status === status.key) && ((c.lane || 0) === laneIndex));
+        for (const card of cards) {
+          container.appendChild(renderCard(card));
+        }
+
+        section.appendChild(container);
+      }
+      laneEl.appendChild(section);
     }
+    board.appendChild(laneEl);
   }
+  setupDnD();
+  updateLaneButtonsVisibility();
 }
 
 // Boards UI helpers and actions
@@ -348,10 +470,13 @@ function refreshBoardSelect() {
   }
 }
 
-function createBoard(name, initialState = []) {
+function createBoard(name, initialState = [], lanes = 1, storyNotes = null) {
   const meta = loadBoardsMeta();
   const id = "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now() };
+  const lanesNum = Math.max(1, Math.floor(lanes || 1));
+  let notes = Array.isArray(storyNotes) ? storyNotes.slice(0, lanesNum) : [];
+  while (notes.length < lanesNum) notes.push("");
+  const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now(), lanes: lanesNum, storyNotes: notes };
   meta.push(boardMeta);
   saveBoardsMeta(meta);
   localStorage.setItem(boardKey(id), JSON.stringify(initialState));
@@ -394,7 +519,9 @@ function loadBoard(id) {
 
 function saveBoardAs(name) {
   const clone = state.map((c) => ({ ...c }));
-  createBoard(name || "Cópia do Quadro", clone);
+  const lanes = getLanesCount();
+  const notes = getStoryNotes();
+  createBoard(name || "Cópia do Quadro", clone, lanes, notes);
 }
 
 function renderCard(card) {
@@ -403,6 +530,14 @@ function renderCard(card) {
   el.draggable = true;
   el.dataset.id = card.id;
 
+  // Apply color modifier if present
+  if (card && typeof card.color === 'string') {
+    const c = card.color.trim().toLowerCase();
+    if (c === 'yellow' || c === 'blue' || c === 'red' || c === 'green' || c === 'gray') {
+      el.classList.add(`color-${c}`);
+    }
+  }
+
   const head = document.createElement("div");
   head.className = "card-head";
 
@@ -410,39 +545,52 @@ function renderCard(card) {
   title.className = "card-title";
   title.textContent = card.title || "(Sem título)";
 
-  const actions = document.createElement("div");
-  actions.className = "card-actions";
+  head.append(title);
 
-  const editBtn = document.createElement("button");
-  editBtn.className = "icon-btn";
-  editBtn.title = "Editar";
-  editBtn.textContent = "✎";
-  editBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openModal({ mode: "edit", card });
-  });
+  const desc = document.createElement("p");
+  desc.className = "card-desc";
+  desc.textContent = card.description || "";
 
-  const delBtn = document.createElement("button");
-  delBtn.className = "icon-btn danger";
-  delBtn.title = "Excluir";
-  delBtn.textContent = "🗑";
-  delBtn.addEventListener("click", (e) => {
+  // Footer with observation/note if present
+  let footer = null;
+  const noteText = (card.observation || "").trim();
+  if (noteText) {
+    footer = document.createElement("div");
+    footer.className = "card-footer";
+    const note = document.createElement("p");
+    note.className = "card-note";
+    note.textContent = noteText;
+    footer.appendChild(note);
+  }
+
+  // Close (delete) button in the top-right corner
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'card-close';
+  closeBtn.title = 'Excluir';
+  closeBtn.setAttribute('aria-label', 'Excluir');
+  closeBtn.textContent = '×';
+  closeBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const ok = confirm("Deseja excluir esta tarefa?");
+    const ok = confirm('Deseja excluir esta tarefa?');
     if (!ok) return;
     state = state.filter((c) => c.id !== card.id);
     saveState();
     renderBoard();
   });
 
-  actions.append(editBtn, delBtn);
-  head.append(title, actions);
+  // Edit button in the top-right corner (left of close)
+  const editBtnCorner = document.createElement('button');
+  editBtnCorner.className = 'card-edit';
+  editBtnCorner.title = 'Editar';
+  editBtnCorner.setAttribute('aria-label', 'Editar');
+  editBtnCorner.textContent = '✎';
+  editBtnCorner.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openModal({ mode: 'edit', card });
+  });
 
-  const desc = document.createElement("p");
-  desc.className = "card-desc";
-  desc.textContent = card.description || "";
-
-  el.append(head, desc);
+  if (footer) el.append(head, desc, footer, editBtnCorner, closeBtn);
+  else el.append(head, desc, editBtnCorner, closeBtn);
 
   el.addEventListener("dragstart", (e) => {
     el.classList.add("dragging");
@@ -457,12 +605,19 @@ function renderCard(card) {
 function setupDnD() {
   document.querySelectorAll(".column-cards").forEach((col) => {
     col.addEventListener("dragover", (e) => {
+      const isStory = col.dataset.status === 'story';
+      if (isStory) {
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+        return; // do not allow drop over História
+      }
       e.preventDefault();
       col.classList.add("drop-target");
       e.dataTransfer.dropEffect = "move";
     });
     col.addEventListener("dragleave", () => col.classList.remove("drop-target"));
     col.addEventListener("drop", (e) => {
+      const isStory = col.dataset.status === 'story';
+      if (isStory) return;
       e.preventDefault();
       col.classList.remove("drop-target");
       const id = e.dataTransfer.getData("text/plain");
@@ -470,8 +625,11 @@ function setupDnD() {
       const card = findCard(id);
       if (!card) return;
       const toStatus = col.dataset.status;
-      if (card.status === toStatus) return;
+      const toLane = parseInt(col.dataset.lane || '0', 10) || 0;
+      const samePlace = (card.status === toStatus) && ((card.lane || 0) === toLane);
+      if (samePlace) return;
       card.status = toStatus;
+      card.lane = toLane;
       saveState();
       renderBoard();
     });
@@ -484,20 +642,40 @@ function openModal({ mode, card } = { mode: "create" }) {
   const idEl = document.getElementById("cardId");
   const titleInput = document.getElementById("titleInput");
   const descInput = document.getElementById("descInput");
+  const obsInput = document.getElementById("obsInput");
   const statusSelect = document.getElementById("statusSelect");
+  const colorRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="color"]'));
 
   if (mode === "edit" && card) {
     titleEl.textContent = "Editar Tarefa";
     idEl.value = card.id;
     titleInput.value = card.title || "";
     descInput.value = card.description || "";
-    statusSelect.value = card.status;
+    obsInput.value = card.observation || "";
+    statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
+    // Set color selection
+    const currentColor = (card.color || '').toLowerCase();
+    let found = false;
+    colorRadios.forEach((r) => {
+      const match = r.value === currentColor;
+      r.checked = match;
+      if (match) found = true;
+    });
+    if (!found) {
+      // default selection for legacy cards without color
+      const def = document.querySelector('input[name="color"][value="yellow"]');
+      if (def) def.checked = true;
+    }
   } else {
     titleEl.textContent = "Nova Tarefa";
     idEl.value = "";
     titleInput.value = "";
     descInput.value = "";
+    obsInput.value = "";
     statusSelect.value = "backlog";
+    // default color
+    const def = document.querySelector('input[name="color"][value="yellow"]');
+    if (def) def.checked = true;
   }
 
   modal.classList.remove("hidden");
@@ -557,6 +735,8 @@ function bindUI() {
     if (!ok) return;
     state = [];
     saveState();
+    // Resetar as linhas para 1 ao limpar o quadro
+    setLanesCount(1);
     renderBoard();
     // Fechar menus após ação de limpar
     if (typeof closeMenus === 'function') closeMenus();
@@ -568,18 +748,24 @@ function bindUI() {
     const id = document.getElementById("cardId").value.trim();
     const title = document.getElementById("titleInput").value.trim();
     const description = document.getElementById("descInput").value.trim();
-    const status = document.getElementById("statusSelect").value;
+    const observation = document.getElementById("obsInput").value.trim();
+    let status = document.getElementById("statusSelect").value;
+    const colorEl = /** @type {HTMLInputElement|null} */(document.querySelector('input[name="color"]:checked'));
+    const color = colorEl ? colorEl.value : 'yellow';
     if (!title) return;
+    if (status === 'story') status = 'backlog';
 
     if (id) {
       const existing = findCard(id);
       if (existing) {
         existing.title = title;
         existing.description = description;
+        existing.observation = observation;
         existing.status = status;
+        existing.color = color;
       }
     } else {
-      state.push({ id: uid(), title, description, status, createdAt: Date.now() });
+      state.push({ id: uid(), title, description, observation, status, color, lane: 0, createdAt: Date.now() });
     }
 
     saveState();
@@ -633,7 +819,7 @@ function bindUI() {
     newBoardBtn.addEventListener("click", () => {
       const name = prompt("Nome do novo quadro:", "Novo Quadro");
       if (name === null) return;
-      createBoard(name.trim() || "Novo Quadro", []);
+      createBoard(name.trim() || "Novo Quadro", [], 1);
       closeMenus();
     });
   }
@@ -644,6 +830,44 @@ function bindUI() {
       const name = prompt("Salvar quadro como:", "Cópia do Quadro");
       if (name === null) return;
       saveBoardAs(name.trim() || "Cópia do Quadro");
+      closeMenus();
+    });
+  }
+
+  const addLaneBtn = document.getElementById('addLaneBtn');
+  if (addLaneBtn) {
+    addLaneBtn.addEventListener('click', () => {
+      const current = getLanesCount();
+      setLanesCount(current + 1);
+      renderBoard();
+      closeMenus();
+      try { document.getElementById('board').lastElementChild?.scrollIntoView({ behavior: 'smooth' }); } catch {}
+    });
+  }
+
+  const removeLaneBtn = document.getElementById('removeLaneBtn');
+  if (removeLaneBtn) {
+    removeLaneBtn.addEventListener('click', () => {
+      const count = getLanesCount();
+      if (count <= 1) {
+        alert('Já está na primeira linha.');
+        return;
+      }
+      const lastIndex = count - 1;
+      const hasCardsInLast = state.some((c) => (c.lane || 0) === lastIndex);
+      if (hasCardsInLast) {
+        const ok = confirm('A última linha possui tarefas. Elas serão movidas para a linha anterior. Continuar?');
+        if (!ok) return;
+      }
+      // Move cards from last lane to previous lane
+      state.forEach((c) => {
+        const l = (c.lane || 0);
+        if (l === lastIndex) c.lane = Math.max(0, lastIndex - 1);
+        else if (l > lastIndex) c.lane = Math.max(0, lastIndex - 1);
+      });
+      saveState();
+      setLanesCount(count - 1);
+      renderBoard();
       closeMenus();
     });
   }
@@ -666,6 +890,8 @@ function bindUI() {
   if (boardNamePill) {
     boardNamePill.addEventListener('click', renameCurrentBoardInline);
   }
+  // Initial visibility for lane controls
+  updateLaneButtonsVisibility();
 }
 
 function maybeSeed() {
@@ -744,6 +970,7 @@ function init() {
 
 // Export board as image (PNG)
 async function exportBoardImage() {
+  const root = document.documentElement;
   try {
     // Close any open menus so they don't appear in the capture
     if (typeof closeMenus === 'function') closeMenus();
@@ -752,7 +979,9 @@ async function exportBoardImage() {
       alert("Ferramenta de captura indisponível.");
       return;
     }
-    // ensure modal borders/hover states settle
+    // Temporarily remove shadows for export
+    root.classList.add('no-shadow-export');
+    // ensure UI settles
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const scale = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     const canvas = await window.html2canvas(target, {
@@ -775,6 +1004,8 @@ async function exportBoardImage() {
   } catch (err) {
     console.error("Falha ao exportar imagem:", err);
     alert("Não foi possível gerar a imagem do quadro.");
+  } finally {
+    root.classList.remove('no-shadow-export');
   }
 }
 
@@ -792,6 +1023,8 @@ function exportBoardJson() {
       name: cur.name || "Quadro",
       createdAt: cur.createdAt || null,
       updatedAt: cur.updatedAt || null,
+      lanes: getLanesCount(),
+      storyNotes: getStoryNotes(),
       cards: state
     };
     const json = JSON.stringify(payload, null, 2);
@@ -828,9 +1061,13 @@ function importBoardJsonFile(file) {
       const data = JSON.parse(text);
       let cards = [];
       let name = '';
+      let lanes = 1;
+      let storyNotes = [];
       if (data && Array.isArray(data.cards)) {
         cards = data.cards;
         name = data.name || '';
+        lanes = (typeof data.lanes === 'number' && data.lanes > 0) ? Math.floor(data.lanes) : 1;
+        if (Array.isArray(data.storyNotes)) storyNotes = data.storyNotes;
       } else if (Array.isArray(data)) {
         cards = data;
       } else {
@@ -838,21 +1075,28 @@ function importBoardJsonFile(file) {
       }
       // Normalize cards
       const validStatuses = new Set(STATUSES.map(s => s.key));
+      const validColors = new Set(['yellow','blue','red','green','gray']);
       const normalized = (cards || []).map((c) => {
         const id = c && typeof c.id === 'string' && c.id ? c.id : uid();
         const title = c && typeof c.title === 'string' ? c.title : '';
         const description = c && typeof c.description === 'string' ? c.description : '';
-        const status = c && typeof c.status === 'string' && validStatuses.has(c.status) ? c.status : 'backlog';
+        const observation = c && typeof c.observation === 'string' ? c.observation : '';
+        let status = c && typeof c.status === 'string' && validStatuses.has(c.status) ? c.status : 'backlog';
+        if (status === 'story') status = 'backlog';
+        const color = c && typeof c.color === 'string' && validColors.has(c.color) ? c.color : 'yellow';
+        const lane = (c && typeof c.lane === 'number' && c.lane >= 0) ? Math.floor(c.lane) : 0;
         const createdAt = (c && typeof c.createdAt === 'number') ? c.createdAt : Date.now();
-        return { id, title, description, status, createdAt };
+        return { id, title, description, observation, status, color, lane, createdAt };
       });
       const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
       if (asNew) {
-        createBoard(name || 'Importado', normalized);
+        createBoard(name || 'Importado', normalized, lanes, storyNotes);
       } else {
         state = normalized;
         saveState();
         renderBoard();
+        setLanesCount(lanes);
+        setStoryNotes(storyNotes);
       }
       if (typeof closeMenus === 'function') closeMenus();
       alert('Importação concluída.');

@@ -3,19 +3,21 @@
 Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organizar tarefas localmente no navegador. Ele não requer backend nem build: basta abrir o `index.html` e usar.
 
 ## Funcionalidades
-- 5 colunas: Backlog, A Fazer, Fazendo, Revisão, Concluído.
+- 1 coluna especial + 5 de fluxo: História (anotações), Backlog, A Fazer, Fazendo, Revisão, Concluído.
+- Notas por linha na coluna História: edição inline (contenteditable), com salvamento automático.
+- Múltiplas linhas (swimlanes): adicionar/remover linha em Tarefas; “Limpar quadro” mantém 1 linha.
 - Múltiplos quadros: selecionar, criar, duplicar (Salvar como) e apagar.
 - Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Exportar).
-- CRUD de cartões: criar, editar (✎) e excluir (🗑).
-- Arrastar e soltar entre colunas (drag & drop).
-- Modal para criação/edição com título, descrição e status.
+- Cartões: criar, editar e excluir — botões no canto superior direito (✎ editar, × excluir).
+- Arrastar e soltar entre colunas/linhas (drag & drop). Não é permitido soltar na coluna História.
+- Modal de cartão com Título, Descrição, Observação (rodapé do card), Status e Cor.
+- Cores de cartão (pastel): amarelo, azul, vermelho, verde e cinza.
 - Persistência automática no navegador via `localStorage`.
 - Tema claro/escuro com alternância na toolbar e preferência salva.
-- Exportar imagem (PNG) da página (header + board) com timestamp.
-- Exportar/Importar JSON do quadro (backup/restauração).
-- Limpar quadro (apaga todos os cartões).
-- Nome do quadro atual exibido ao lado do logo.
-- Renomear quadro clicando no nome ao lado do logo (edição inline com ícone de lápis; Enter salva, Esc cancela).
+- Exportar imagem (PNG) do header + board; durante a captura sombras e gradientes são desativados para um visual limpo.
+- Exportar/Importar JSON do quadro (backup/restauração) incluindo `lanes`, `storyNotes` e campos dos cartões.
+- Limpar quadro (apaga todos os cartões e reseta para 1 linha).
+- Nome do quadro atual exibido ao lado do logo e renomeável inline (Enter salva, Esc cancela).
 - Layout responsivo com colunas dinâmicas (auto‑fit, sem scroll horizontal).
 - Semente de exemplo na primeira execução (se não houver dados salvos).
 
@@ -24,13 +26,14 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 2. Menu superior (cabeçalho fixo):
    - Quadros: Selecionar quadro | Novo Quadro | Salvar como | Apagar Quadro.
    - Renomear: clique no nome do quadro (pill ao lado do logo) para editar inline (ícone de lápis aparece no hover). Enter salva, Esc cancela.
-   - Tarefas: Nova tarefa | Limpar quadro.
+   - Tarefas: Nova tarefa | Nova linha | Remover linha | Limpar quadro.
    - Importar/Exportar: Exportar imagem (PNG do header + board) | Exportar JSON | Importar JSON.
    - Tema: botão à direita alterna entre claro/escuro.
 3. Em cada cartão:
-   - ✎ Editar: abre o modal com os dados do cartão.
-   - 🗑 Excluir: remove o cartão após confirmação.
-4. Arraste cartões entre colunas para alterar o status.
+   - ✎ (canto superior direito) Editar.
+   - × (canto superior direito) Excluir (com confirmação).
+4. Arraste cartões entre colunas/linhas para alterar status/linha. Observação: não é possível soltar na coluna História.
+5. Coluna História: clique no campo para escrever notas da linha; salva automaticamente.
 
 ## Executar localmente (opcional)
 Você pode simplesmente abrir o `index.html`. Se preferir um servidor local:
@@ -53,11 +56,33 @@ python -m http.server 8000
   - Criar um novo quadro com os cartões importados (recomendado);
   - Ou substituir o conteúdo do quadro atual.
   O formato aceito é:
-  - Objeto: `{ id, name, createdAt, updatedAt, cards: [...] }`, ou
-  - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]`.
+  - Objeto (recomendado):
+    ```json
+    {
+      "id": "<id>",
+      "name": "<nome>",
+      "createdAt": 0,
+      "updatedAt": 0,
+      "lanes": 1,
+      "storyNotes": ["nota por linha"],
+      "cards": [
+        {
+          "id": "<id>",
+          "title": "<título>",
+          "description": "<descrição>",
+          "observation": "<observação>",
+          "status": "backlog|todo|doing|review|done",
+          "color": "yellow|blue|red|green|gray",
+          "lane": 0,
+          "createdAt": 0
+        }
+      ]
+    }
+    ```
+  - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]` (campos ausentes são normalizados; `status: "story"` é convertido para `backlog`).
  
  Exemplo pronto para importar:
-- `samples/board-receita-bolo-5.json` — quadro “Receita de Bolo - 5 por coluna” com 25 cartões (5 por coluna: backlog, todo, doing, review, done).
+- `samples/board-receita-bolo.json` — quadro “Receita de Bolo” com 2 linhas (lanes) e cartões distribuídos entre backlog, todo, doing, review e done.
    - Use no app: Importar/Exportar → Importar JSON e selecione este arquivo.
 
 ## Quadros
@@ -95,6 +120,7 @@ Rewrite (Apache):
 ## Exportar imagem
 - Botão: “Exportar imagem”.
 - Captura a página (header + board) e baixa um arquivo como `scrumy-YYYYMMDD-HHMMSS.png`.
+- Durante a captura, sombras (cards/colunas/header/footer) e gradientes de fundo são temporariamente desativados para evitar halos na imagem.
 - Implementado com `html2canvas` vendorizado em `vendor/html2canvas.min.js`.
 
 ## Tema claro/escuro

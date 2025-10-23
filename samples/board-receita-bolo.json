@@ -1,0 +1,42 @@
+{
+  "id": "board-receita-bolo",
+  "name": "Receita de Bolo",
+  "createdAt": 1700000000000,
+  "updatedAt": 1700000000000,
+  "lanes": 2,
+  "storyNotes": [
+    "Linha 1 — Contexto: bolo simples e fofinho. Foco: preparo e organização.",
+    "Linha 2 — Observações: ajustes finos e melhoria contínua."
+  ],
+  "cards": [
+    { "id": "c-backlog-01", "title": "Escolher sabor do bolo", "description": "Definir sabor principal (chocolate, baunilha, cenoura...).", "observation": "Preferência: cenoura com cobertura de chocolate.", "status": "backlog", "color": "yellow", "lane": 0, "createdAt": 1700000000000 },
+    { "id": "c-backlog-02", "title": "Restrições alimentares", "description": "Checar se precisa ser sem lactose/sem glúten.", "observation": "Sem restrições.", "status": "backlog", "color": "yellow", "lane": 0, "createdAt": 1700000001000 },
+    { "id": "c-backlog-03", "title": "Porções necessárias", "description": "Quantas pessoas vão comer?", "observation": "6–8 porções.", "status": "backlog", "color": "yellow", "lane": 0, "createdAt": 1700000002000 },
+    { "id": "c-backlog-04", "title": "Cobertura e recheio", "description": "Escolher cobertura (ganache, brigadeiro, chantilly).", "observation": "Ganache simples 2:1.", "status": "backlog", "color": "yellow", "lane": 1, "createdAt": 1700000003000 },
+    { "id": "c-backlog-05", "title": "Decoração", "description": "Ideias de decoração simples (granulado, frutas, raspas).", "observation": "Granulado escuro.", "status": "backlog", "color": "yellow", "lane": 1, "createdAt": 1700000004000 },
+
+    { "id": "c-todo-01", "title": "Comprar ingredientes", "description": "Farinha, açúcar, ovos, manteiga, leite, fermento.", "observation": "Ver se falta chocolate em pó.", "status": "todo", "color": "blue", "lane": 0, "createdAt": 1700000005000 },
+    { "id": "c-todo-02", "title": "Preaquecer o forno", "description": "180 ºC por ~10 minutos.", "observation": "Ligar antes de começar a massa.", "status": "todo", "color": "blue", "lane": 0, "createdAt": 1700000006000 },
+    { "id": "c-todo-03", "title": "Untar e enfarinhar a forma", "description": "Usar manteiga/óleo e farinha.", "observation": "Usar papel manteiga no fundo.", "status": "todo", "color": "blue", "lane": 0, "createdAt": 1700000007000 },
+    { "id": "c-todo-04", "title": "Organizar bancada", "description": "Separar utensílios e tigelas.", "observation": "Deixar fouet e espátula à mão.", "status": "todo", "color": "blue", "lane": 1, "createdAt": 1700000008000 },
+    { "id": "c-todo-05", "title": "Higienizar utensílios", "description": "Lavar e secar colheres, fouet, espátulas.", "observation": "Secar bem para não empelotar.", "status": "todo", "color": "blue", "lane": 1, "createdAt": 1700000009000 },
+
+    { "id": "c-doing-01", "title": "Misturar secos", "description": "Peneirar farinha, açúcar e fermento.", "observation": "Peneirar 2x para ficar mais leve.", "status": "doing", "color": "red", "lane": 0, "createdAt": 1700000010000 },
+    { "id": "c-doing-02", "title": "Bater manteiga e açúcar", "description": "Cremar até ficar fofo e claro.", "observation": "Não bater demais após ovos.", "status": "doing", "color": "red", "lane": 0, "createdAt": 1700000011000 },
+    { "id": "c-doing-03", "title": "Adicionar ovos", "description": "Um a um, batendo entre cada adição.", "observation": "Ovos em temperatura ambiente.", "status": "doing", "color": "red", "lane": 0, "createdAt": 1700000012000 },
+    { "id": "c-doing-04", "title": "Incorporar secos e leite", "description": "Alternando seco/líquido até homogeneizar.", "observation": "Misturar só até incorporar.", "status": "doing", "color": "red", "lane": 1, "createdAt": 1700000013000 },
+    { "id": "c-doing-05", "title": "Levar à forma", "description": "Despejar massa e nivelar.", "observation": "Bater forma levemente para tirar bolhas.", "status": "doing", "color": "red", "lane": 1, "createdAt": 1700000014000 },
+
+    { "id": "c-review-01", "title": "Conferir consistência da massa", "description": "Sem grumos, textura lisa.", "observation": "Textura brilhante e homogênea.", "status": "review", "color": "gray", "lane": 0, "createdAt": 1700000015000 },
+    { "id": "c-review-02", "title": "Checar temperatura do forno", "description": "Estável em 180 ºC.", "observation": "Usar termômetro de forno.", "status": "review", "color": "gray", "lane": 0, "createdAt": 1700000016000 },
+    { "id": "c-review-03", "title": "Teste do palito", "description": "Assado quando o palito sai limpo.", "observation": "Verificar a partir de 35 min.", "status": "review", "color": "gray", "lane": 0, "createdAt": 1700000017000 },
+    { "id": "c-review-04", "title": "Resfriar na grade", "description": "Aguardar 10–15 min antes de desenformar.", "observation": "Desenformar com cuidado.", "status": "review", "color": "gray", "lane": 1, "createdAt": 1700000018000 },
+    { "id": "c-review-05", "title": "Preparar cobertura", "description": "Ganache/brigadeiro/chantilly conforme escolhido.", "observation": "Ganache 200g choc + 100g creme.", "status": "review", "color": "gray", "lane": 1, "createdAt": 1700000019000 },
+
+    { "id": "c-done-01", "title": "Cobrir o bolo", "description": "Aplicar cobertura de forma uniforme.", "observation": "Espátula aquecida ajuda a alisar.", "status": "done", "color": "green", "lane": 0, "createdAt": 1700000020000 },
+    { "id": "c-done-02", "title": "Decorar", "description": "Finalizar com granulado/frutas/raspas.", "observation": "Granulado só no topo.", "status": "done", "color": "green", "lane": 0, "createdAt": 1700000021000 },
+    { "id": "c-done-03", "title": "Limpar a cozinha", "description": "Lavar utensílios e organizar.", "observation": "Guardar forma quando fria.", "status": "done", "color": "green", "lane": 0, "createdAt": 1700000022000 },
+    { "id": "c-done-04", "title": "Fotografar o resultado", "description": "Registrar a receita pronta.", "observation": "Luz natural na janela.", "status": "done", "color": "green", "lane": 1, "createdAt": 1700000023000 },
+    { "id": "c-done-05", "title": "Anotar observações", "description": "Tempo, ajustes e dicas para a próxima.", "observation": "Assou em 40 min. Açúcar ok.", "status": "done", "color": "green", "lane": 1, "createdAt": 1700000024000 }
+  ]
+}

@@ -14,6 +14,18 @@
   --hover-1: rgba(255,255,255,.03);
   --hover-2: rgba(255,255,255,.05);
   --overlay-bg: rgba(2,6,23,.6);
+
+  /* Card color variables (dark theme) */
+  --card-yellow-bg: rgba(253, 230, 138, 0.12); /* amber-200 */
+  --card-yellow-border: rgba(253, 230, 138, 0.38);
+  --card-blue-bg: rgba(147, 197, 253, 0.12); /* blue-300 */
+  --card-blue-border: rgba(147, 197, 253, 0.38);
+  --card-red-bg: rgba(252, 165, 165, 0.12); /* red-300 */
+  --card-red-border: rgba(252, 165, 165, 0.38);
+  --card-green-bg: rgba(134, 239, 172, 0.12); /* green-300 */
+  --card-green-border: rgba(134, 239, 172, 0.38);
+  --card-gray-bg: rgba(209, 213, 219, 0.12); /* gray-300 */
+  --card-gray-border: rgba(209, 213, 219, 0.38);
 }
 
 /* Light theme overrides */
@@ -33,6 +45,18 @@
   --hover-1: rgba(0,0,0,.04);
   --hover-2: rgba(0,0,0,.06);
   --overlay-bg: rgba(0,0,0,.45);
+
+  /* Card color variables (light theme) */
+  --card-yellow-bg: #FEF9C3; /* yellow-100 */
+  --card-yellow-border: #FDE68A; /* yellow-200 */
+  --card-blue-bg: #DBEAFE; /* blue-100 */
+  --card-blue-border: #BFDBFE; /* blue-200 */
+  --card-red-bg: #FEE2E2; /* red-100 */
+  --card-red-border: #FCA5A5; /* red-300 */
+  --card-green-bg: #DCFCE7; /* green-100 */
+  --card-green-border: #BBF7D0; /* green-200 */
+  --card-gray-bg: #F3F4F6; /* gray-100 */
+  --card-gray-border: #E5E7EB; /* gray-200 */
 }
 
 * { box-sizing: border-box; }
@@ -118,10 +142,33 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 .btn.danger:hover { background: rgba(239,68,68,.15); }
 
 .board {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 20px 24px;
+}
+
+.lane {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-  padding: 0 20px 24px;
+}
+
+/* História (story) inline notes */
+.story-notes { padding: 12px; }
+.story-editor {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 120px;
+  white-space: pre-wrap;
+  outline: none;
+}
+.story-editor:empty:before {
+  content: attr(data-placeholder);
+  color: var(--muted);
 }
 
 .column {
@@ -163,7 +210,15 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
   border-radius: 12px;
   padding: 12px;
   box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  position: relative;
 }
+
+/* Colored card modifiers */
+.card.color-yellow { background: var(--card-yellow-bg); border-color: var(--card-yellow-border); }
+.card.color-blue { background: var(--card-blue-bg); border-color: var(--card-blue-border); }
+.card.color-red { background: var(--card-red-bg); border-color: var(--card-red-border); }
+.card.color-green { background: var(--card-green-bg); border-color: var(--card-green-border); }
+.card.color-gray { background: var(--card-gray-bg); border-color: var(--card-gray-border); }
 
 .card.dragging { opacity: .6; }
 
@@ -171,19 +226,59 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 .card-title { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
 .card-desc { font-size: 13px; color: var(--muted); white-space: pre-wrap; margin: 0; }
 
-.card-actions { display: flex; gap: 6px; }
-.icon-btn {
-  appearance: none;
+.card-footer { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.card-note { font-size: 12px; color: var(--muted); white-space: pre-wrap; margin: 0; }
+
+
+
+/* Card close (delete) button */
+.card-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
   background: transparent;
   color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  width: 30px; height: 30px;
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
+  line-height: 0;
   cursor: pointer;
 }
-.icon-btn:hover { color: var(--text); background: var(--hover-2); }
-.icon-btn.danger:hover { color: #fff; background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); }
+.card-close:hover { background: var(--hover-2); color: var(--text); }
+.card-close:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Export overrides: remove shadows in capture */
+.no-shadow-export .card,
+.no-shadow-export .column,
+.no-shadow-export .app-header,
+.no-shadow-export .app-footer {
+  box-shadow: none !important;
+}
+/* Flatten background/gradients during export */
+.no-shadow-export body { background: var(--bg) !important; }
+.no-shadow-export .board { background: var(--bg) !important; }
+.no-shadow-export .column { background: var(--panel) !important; }
+
+.card-edit {
+  position: absolute;
+  top: 8px;
+  right: 36px; /* leave space for close button */
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  line-height: 0;
+  cursor: pointer;
+}
+.card-edit:hover { background: var(--hover-2); color: var(--text); }
+.card-edit:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* Modal */
 .modal {
@@ -211,6 +306,17 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
   padding: 10px 12px;
   font-size: 14px;
 }
+
+/* Color options (radio) */
+.color-options { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.color-option { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.color-option input { accent-color: var(--primary); }
+.swatch { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); display: inline-block; }
+.swatch-yellow { background: var(--card-yellow-bg); border-color: var(--card-yellow-border); }
+.swatch-blue { background: var(--card-blue-bg); border-color: var(--card-blue-border); }
+.swatch-red { background: var(--card-red-bg); border-color: var(--card-red-border); }
+.swatch-green { background: var(--card-green-bg); border-color: var(--card-green-border); }
+.swatch-gray { background: var(--card-gray-bg); border-color: var(--card-gray-border); }
 .modal-actions { display: flex; justify-content: end; gap: 8px; margin-top: 12px; }
 
 /* Responsive */
