@@ -264,6 +264,9 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 .no-shadow-export body { background: var(--bg) !important; }
 .no-shadow-export .board { background: var(--bg) !important; }
 .no-shadow-export .column { background: var(--panel) !important; }
+/* Hide corner action buttons during export */
+.no-shadow-export .card-edit,
+.no-shadow-export .card-close { display: none !important; }
 
 .card-edit {
   position: absolute;
