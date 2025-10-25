@@ -259,8 +259,9 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  0,
-                      "createdAt":  1700000020000,
-                      "priority":  "low"
+        "createdAt":  1700000020000,
+        "priority":  "low",
+        "completedAt": 1700000020000
                   },
                   {
                       "id":  "c-done-02",
@@ -271,8 +272,9 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  0,
-                      "createdAt":  1700000021000,
-                      "priority":  "low"
+        "createdAt":  1700000021000,
+        "priority":  "low",
+        "completedAt": 1700000021000
                   },
                   {
                       "id":  "c-done-03",
@@ -283,8 +285,9 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  0,
-                      "createdAt":  1700000022000,
-                      "priority":  "low"
+        "createdAt":  1700000022000,
+        "priority":  "low",
+        "completedAt": 1700000022000
                   },
                   {
                       "id":  "c-done-04",
@@ -295,8 +298,9 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  1,
-                      "createdAt":  1700000023000,
-                      "priority":  "medium"
+        "createdAt":  1700000023000,
+        "priority":  "medium",
+        "completedAt": 1700000023000
                   },
                   {
                       "id":  "c-done-05",
@@ -307,7 +311,8 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  1,
-                      "createdAt":  1700000024000
+        "createdAt":  1700000024000,
+        "completedAt": 1700000024000
                   }
               ],
     "priorityFilter":  ""
