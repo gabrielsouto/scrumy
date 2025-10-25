@@ -19,6 +19,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Datas somente leitura: “Criado” (data de criação) e “Concluído” (quando o status vira Concluído), exibidas no card e no modal (somente edição).
 - Cores de cartão (pastel): amarelo, azul, vermelho, verde e cinza.
 - Persistência automática no navegador via `localStorage`.
+- Integração opcional com Google Drive (manualmente: salvar/abrir JSON no seu Drive).
 - Tema claro/escuro com alternância na toolbar e preferência salva.
 - Exportar imagem (PNG) do header + board; durante a captura sombras e gradientes são desativados para um visual limpo.
 - Exportação longa melhorada: durante a captura o rodapé deixa de ser fixo para não sobrepor cards em quadros muito altos.
@@ -56,6 +57,36 @@ python -m http.server 8000
 - Quadro atual selecionado em `scrumy.current.boardId.v1`.
 - Migração automática: se houver dados antigos em `scrumy.board.v1`, eles são movidos para um quadro padrão "Quadro 1" na primeira carga.
 - Os dados ficam no navegador atual (por máquina/perfil). Limpar dados do site apaga o quadro.
+
+### Google Drive (conectar para salvar no Drive)
+- Menu "Google Drive": contém apenas "Conectar" e "Desconectar".
+- O status agora aparece no rodapé (badge colorida):
+  - Verde: Conectado ao Google Drive
+  - Azul: Carregando/Conectando/Salvando
+  - Amarelo: Falha — usando armazenamento local (fallback)
+  - Cinza: Desconectado
+- Requer um Client ID OAuth 2.0 (Google Identity Services) do tipo Web.
+  - Crie em https://console.cloud.google.com/apis/credentials.
+  - Autorizados: inclua o domínio onde você hospeda o Scrumy (ex.: `https://seu-dominio.com`).
+  - Escopo usado: `https://www.googleapis.com/auth/drive.file` (acessa somente arquivos criados pelo app).
+- Como usar:
+  - Clique em "Conectar" para autorizar. A partir daí, o Scrumy passa a salvar automaticamente seus quadros em um bundle `Scrumy - All Boards.json` no Google Drive.
+  - Clique em "Desconectar" para voltar a usar apenas o armazenamento local (localStorage).
+  - Não há tentativa de conexão automática ao abrir o site; a conexão só ocorre quando você clicar em "Conectar".
+  - Resiliência: se o salvamento no Drive falhar, o app continua salvando localmente e tenta sincronizar em segundo plano com backoff exponencial até recuperar a conexão.
+
+#### Mesclagem e persistência
+- Ao conectar, o app NÃO sobrescreve seu conteúdo local com o do Drive. Em vez disso, mescla:
+  - Mantém todos os quadros que já existem no localStorage.
+  - Adiciona os quadros que estão no Drive e não existem localmente.
+  - Se um `id` de quadro existe nos dois e o nome for igual (ignorando maiúsculas/minúsculas), trata como o mesmo quadro e preenche apenas metadados que estejam faltando localmente (ex.: `lanes`, `storyNotes`, filtros), sem alterar os cartões locais.
+  - Se um `id` de quadro existe nos dois e o nome for diferente, o quadro vindo do Drive é renomeado com um novo `id` (único) para evitar colisão, e é adicionado como um quadro novo. O state do Drive é preservado com o novo `id`.
+- Escolha do quadro atual após mesclar:
+  - Mantém o quadro atual local, se possível.
+  - Senão, tenta usar o “current” do Drive.
+  - Senão, seleciona o primeiro da lista.
+
+Observação: depois de conectado, o auto‑save envia todo o conjunto mesclado (local + Drive) para o Drive (bundle "All Boards").
 
 ## Exportar/Importar JSON
 - Exportar JSON (quadro atual): baixa um arquivo `.json` contendo o nome/metadados e os cartões do quadro atual.
@@ -173,6 +204,8 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 - Sem colaboração em tempo real: uso é individual no dispositivo atual.
 - Limpar dados do site/apagar `localStorage` remove quadros e cartões.
 - Exportação de imagem é um snapshot estático (não inclui interações/menus abertos).
+ - Google Drive: auto‑save é single‑user por navegador/conta. Sem colaboração em tempo real ou resolução de conflitos.
+ - Quando desconectado, dados permanecem no navegador (localStorage). Ao conectar, o app carrega do Drive e passa a salvar lá.
 
 ## Links
 - Site: https://scrumy.com.br/
