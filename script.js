@@ -697,12 +697,16 @@ function renderCard(card) {
     if (!metaEl) { metaEl = document.createElement('div'); metaEl.className = 'card-meta'; }
     const p = document.createElement('span');
     p.className = `priority-pill priority-${priority}`;
-    p.title = 'Prioridade';
-    let label = 'Média';
-    if (priority === 'low') label = 'Baixa';
-    else if (priority === 'high') label = 'Alta';
-    else if (priority === 'urgent') label = 'Urgente';
-    p.textContent = label;
+    // Visual only: represent priority with signal bars emoji 📶
+    // low=📶, medium=📶📶, high=📶📶📶, urgent=📶📶📶📶
+    let bars = '📶';
+    let label = 'Baixa';
+    if (priority === 'medium') { bars = '📶📶'; label = 'Média'; }
+    else if (priority === 'high') { bars = '📶📶📶'; label = 'Alta'; }
+    else if (priority === 'urgent') { bars = '📶📶📶📶'; label = 'Urgente'; }
+    p.textContent = bars;
+    p.title = `Prioridade: ${label}`;
+    p.setAttribute('aria-label', `Prioridade: ${label}`);
     metaEl.appendChild(p);
   }
   // Created at (read-only info)
