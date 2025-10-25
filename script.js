@@ -1,5 +1,8 @@
 const STORAGE_KEY = "scrumy.board.v1"; // legacy single-board key (for migration)
 const THEME_STORAGE_KEY = "scrumy.theme.v1";
+const GDRIVE_CLIENT_ID_KEY = "scrumy.gdrive.clientId.v1";
+// Optional default Client ID for production (fill if you want auto-connect on scrumy.com.br)
+const GDRIVE_DEFAULT_CLIENT_ID = "365107807245-7j8d1epclusqinmfqd2kn0gj12uuqlfu.apps.googleusercontent.com";
 const BOARDS_META_KEY = "scrumy.boards.meta.v1";
 const CURRENT_BOARD_KEY = "scrumy.current.boardId.v1";
 const BOARD_STATE_PREFIX = "scrumy.board.v1."; // per-board state: scrumy.board.v1.<id>
@@ -20,8 +23,41 @@ let currentAssigneeFilter = '';
 let currentPriorityFilter = '';
 // lanes are stored per-board in meta as `lanes` (number)
 
+// Google Drive auth state (in-memory)
+let gdriveAccessToken = null;
+let gdriveTokenExpiry = 0;
+let gdriveTokenClient = null;
+let gdriveEnabled = false; // only true after user clicks "Conectar"; false after "Desconectar"
+let gdriveSaving = false; // indicates an in-flight debounced Drive save
+let gdriveDegraded = false; // last save failed; using local fallback
+let gdriveRetryTimer = null;
+let gdriveRetryDelayMs = 30000; // start 30s; backoff up to 5min
+const GDRIVE_RETRY_DELAY_MIN = 5000;
+const GDRIVE_RETRY_DELAY_MAX = 300000; // 5 minutes
+
+// Drive bundle cache (auto-sync): mirrors all boards/meta
+let gdriveBundle = null; // { id?, version, meta, currentBoardId, states: { [id]: cards[] } }
+let gdriveSaveTimer = null;
+
+// No automatic mode: we only use Drive after explicit Connect
+
 function uid() {
   return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// Generate a unique board id (separate from card uid)
+function genBoardId() {
+  return "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// Heuristic: consider boards the same if names match case-insensitively
+function likelySameBoardMeta(a, b) {
+  try {
+    const n1 = String((a && a.name) || '').trim().toLowerCase();
+    const n2 = String((b && b.name) || '').trim().toLowerCase();
+    if (!n1 || !n2) return false;
+    return n1 === n2;
+  } catch { return false; }
 }
 
 // Try to read a board name from the URL.
@@ -177,6 +213,8 @@ function saveState() {
       localStorage.setItem(BOARDS_META_KEY, JSON.stringify(meta));
     }
   } catch {}
+  // Auto-sync to Drive on production when connected
+  scheduleGDriveSave();
 }
 
 // Theme management
@@ -206,6 +244,492 @@ function toggleTheme() {
   applyTheme(next);
 }
 
+// ----------------------
+// Google Drive helpers
+// ----------------------
+function getGoogleClientId() {
+  try { return localStorage.getItem(GDRIVE_CLIENT_ID_KEY) || ""; } catch { return ""; }
+}
+
+function setGoogleClientId(id) {
+  try { localStorage.setItem(GDRIVE_CLIENT_ID_KEY, String(id || "")); } catch {}
+}
+
+function isGDriveTokenValid() {
+  return !!gdriveAccessToken && Date.now() < gdriveTokenExpiry - 5000;
+}
+
+function ensureGDriveTokenClient(silent = false) {
+  const clientId = getGoogleClientId().trim();
+  if (!clientId) {
+    if (!silent) alert('Informe o Client ID do Google (OAuth) para conectar ao Drive.');
+    return null;
+  }
+  if (!window.google || !google.accounts || !google.accounts.oauth2) {
+    if (!silent) alert('Biblioteca do Google Identity não carregou. Verifique sua conexão.');
+    return null;
+  }
+  if (!gdriveTokenClient) {
+    gdriveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      prompt: '',
+      callback: (resp) => {
+        if (resp && resp.access_token) {
+          gdriveAccessToken = resp.access_token;
+          const expiresIn = (resp.expires_in ? Number(resp.expires_in) * 1000 : 3600 * 1000);
+          gdriveTokenExpiry = Date.now() + expiresIn;
+          updateGDriveStatusUI();
+        } else if (resp && resp.error) {
+          console.error('Falha ao obter token do Google:', resp.error);
+          alert('Não foi possível conectar ao Google Drive.');
+        }
+      }
+    });
+  }
+  return gdriveTokenClient;
+}
+
+async function gdriveConnect() {
+  const btnConnect = document.getElementById('gdriveConnectBtn');
+  if (btnConnect) btnConnect.disabled = true;
+  setGDriveStatus('Carregando Google...', 'info');
+  const ready = await ensureGoogleIdentityLoaded();
+  if (!ready) { setGDriveStatus('Falha ao carregar Google', 'error'); if (btnConnect) btnConnect.disabled = false; setTimeout(() => updateGDriveStatusUI(), 1500); return; }
+  const client = ensureGDriveTokenClient(false);
+  if (!client) return;
+  try {
+    setGDriveStatus('Conectando...', 'info');
+    const prev = client.callback;
+    client.callback = async (resp) => {
+      prev && prev(resp);
+      if (resp && resp.access_token) {
+        gdriveEnabled = true;
+        gdriveDegraded = false;
+        gdriveRetryDelayMs = GDRIVE_RETRY_DELAY_MIN;
+        updateGDriveStatusUI();
+        try {
+          const loaded = await gdriveLoadBundleIntoLocal();
+          if (loaded) {
+            const meta = loadBoardsMeta();
+            const curId = getCurrentBoardId() || (meta[0] && meta[0].id);
+            if (curId) {
+              setCurrentBoardId(curId);
+              state = loadStateForBoard(curId);
+              refreshBoardSelect();
+              renderBoard();
+            }
+          }
+        } catch {}
+      } else {
+        updateGDriveStatusUI();
+      }
+      if (btnConnect) btnConnect.disabled = false;
+    };
+    client.requestAccessToken({ prompt: 'consent' });
+  } catch (e) {
+    console.error('Erro ao iniciar login do Google:', e);
+    setGDriveStatus('Erro ao conectar', 'error');
+    if (btnConnect) btnConnect.disabled = false;
+    setTimeout(() => updateGDriveStatusUI(), 1500);
+  }
+}
+
+function gdriveDisconnect() {
+  gdriveAccessToken = null;
+  gdriveTokenExpiry = 0;
+  gdriveEnabled = false;
+  gdriveDegraded = false;
+  if (gdriveRetryTimer) { try { clearTimeout(gdriveRetryTimer); } catch {} gdriveRetryTimer = null; }
+  updateGDriveStatusUI();
+}
+
+function updateGDriveStatusUI() {
+  try {
+    const status = document.getElementById('gdriveStatusFooter');
+    const btnConnect = document.getElementById('gdriveConnectBtn');
+    const btnDisconnect = document.getElementById('gdriveDisconnectBtn');
+    const hasClientId = !!getGoogleClientId().trim();
+    const connected = isGDriveTokenValid() && gdriveEnabled;
+    if (status) {
+      if (gdriveSaving) setGDriveStatus('Salvando...', 'info');
+      else if (connected && !gdriveDegraded) setGDriveStatus('Conectado ao Google Drive', 'ok');
+      else if (connected && gdriveDegraded) setGDriveStatus('Falha — usando local', 'warn');
+      else if (!hasClientId) setGDriveStatus('Desconectado (sem Client ID)', 'off');
+      else setGDriveStatus('Desconectado', 'off');
+    }
+    if (btnConnect) btnConnect.disabled = !hasClientId || connected;
+    if (btnDisconnect) btnDisconnect.disabled = !connected;
+  } catch {}
+}
+
+function setGDriveStatusText(text) {
+  try {
+    const status = document.getElementById('gdriveStatusFooter');
+    if (status) status.textContent = String(text || '');
+  } catch {}
+}
+
+function setGDriveStatus(text, kind) {
+  try {
+    const el = document.getElementById('gdriveStatusFooter');
+    if (!el) return;
+    el.textContent = String(text || '');
+    el.classList.remove('status-ok','status-warn','status-error','status-info','status-off');
+    el.classList.add('status-pill');
+    const map = { ok: 'status-ok', warn: 'status-warn', error: 'status-error', info: 'status-info', off: 'status-off' };
+    el.classList.add(map[kind] || 'status-off');
+  } catch {}
+}
+
+async function waitForGoogleIdentity(timeoutMs = 6000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (window.google && google.accounts && google.accounts.oauth2) return true;
+    await new Promise((r) => setTimeout(r, 120));
+  }
+  return false;
+}
+
+// Load Google Identity script on demand
+async function ensureGoogleIdentityLoaded(timeoutMs = 8000) {
+  try {
+    if (window.google && google.accounts && google.accounts.oauth2) return true;
+    let tag = document.querySelector('script[data-scrumy-gis]');
+    if (!tag) {
+      tag = document.createElement('script');
+      tag.src = 'https://accounts.google.com/gsi/client';
+      tag.async = true; tag.defer = true;
+      tag.setAttribute('data-scrumy-gis', '1');
+      document.head.appendChild(tag);
+    }
+    return await waitForGoogleIdentity(timeoutMs);
+  } catch {
+    return false;
+  }
+}
+
+async function gdriveTrySilentConnectIfPossible() {
+  // Use default client ID on production if none saved
+  if (!getGoogleClientId() && GDRIVE_DEFAULT_CLIENT_ID) {
+    setGoogleClientId(GDRIVE_DEFAULT_CLIENT_ID);
+    gdriveTokenClient = null;
+  }
+  // wait for GIS script (accounts.google.com/gsi/client)
+  const ready = await waitForGoogleIdentity();
+  if (!ready) return false;
+  // No auto-connect anymore
+  return false;
+}
+
+async function gdriveAuthedFetch(url, opts = {}) {
+  if (!isGDriveTokenValid()) {
+    // try to silently refresh token
+    const ready = await ensureGoogleIdentityLoaded();
+    if (!ready) throw new Error('Biblioteca Google não carregada.');
+    const client = ensureGDriveTokenClient(true);
+    if (!client) throw new Error('Sem token do Google.');
+    await new Promise((resolve) => {
+      const prev = client.callback;
+      client.callback = (resp) => { prev && prev(resp); resolve(); };
+      try { client.requestAccessToken({ prompt: '' }); } catch { resolve(); }
+    });
+    if (!isGDriveTokenValid()) throw new Error('Token Google inválido/ausente.');
+  }
+  const headers = Object.assign({}, opts.headers || {}, { Authorization: `Bearer ${gdriveAccessToken}` });
+  const finalOpts = Object.assign({}, opts, { headers });
+  const res = await fetch(url, finalOpts);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Falha Drive API ${res.status}: ${text}`);
+  }
+  return res;
+}
+
+async function gdriveFindExistingFileForCurrentBoard() {
+  if (!currentBoardId) return null;
+  // Search files created by this app with matching appProperties boardId
+  const q = encodeURIComponent(["trashed=false", "mimeType='application/json'", `appProperties has { key='boardId' and value='${currentBoardId}' }`].join(' and '));
+  const fields = encodeURIComponent('files(id,name,modifiedTime,appProperties)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&spaces=drive&pageSize=10&orderBy=modifiedTime desc`;
+  const res = await gdriveAuthedFetch(url);
+  const data = await res.json();
+  const files = (data && Array.isArray(data.files)) ? data.files : [];
+  return files[0] || null;
+}
+
+async function gdriveListAppFiles() {
+  // List files created by the app
+  const q = encodeURIComponent(["trashed=false", "mimeType='application/json'"].join(' and '));
+  const fields = encodeURIComponent('files(id,name,modifiedTime,appProperties)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&spaces=drive&pageSize=100&orderBy=modifiedTime desc`;
+  const res = await gdriveAuthedFetch(url);
+  const data = await res.json();
+  return (data && Array.isArray(data.files)) ? data.files : [];
+}
+
+async function gdriveUploadJson(name, json, existingId = null) {
+  const meta = { name, mimeType: 'application/json', appProperties: { app: 'scrumy', boardId: currentBoardId || '' } };
+  const boundary = 'scrumy_boundary_' + Math.random().toString(36).slice(2);
+  const body = [
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n`,
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${json}\r\n`,
+    `--${boundary}--`
+  ].join('');
+  const method = existingId ? 'PATCH' : 'POST';
+  const url = existingId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`
+    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+  const res = await gdriveAuthedFetch(url, { method, headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
+  return res.json();
+}
+
+async function gdriveDownloadFile(id) {
+  const url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media`;
+  const res = await gdriveAuthedFetch(url);
+  return res.text();
+}
+
+// -------- Auto-sync bundle (all boards) --------
+function snapshotLocalDataForBundle() {
+  const meta = loadBoardsMeta();
+  const current = getCurrentBoardId();
+  const states = {};
+  for (const b of meta) {
+    const id = b.id; if (!id) continue;
+    states[id] = loadStateForBoard(id);
+  }
+  return { version: 1, meta, currentBoardId: current || (meta[0]?.id || null), states };
+}
+
+async function gdriveFindBundle() {
+  const q = encodeURIComponent(["trashed=false", "mimeType='application/json'", "name='Scrumy - All Boards.json'"] .join(' and '));
+  const fields = encodeURIComponent('files(id,name,modifiedTime)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&spaces=drive&pageSize=5&orderBy=modifiedTime desc`;
+  const res = await gdriveAuthedFetch(url);
+  const data = await res.json();
+  const files = (data && Array.isArray(data.files)) ? data.files : [];
+  return files[0] || null;
+}
+
+async function gdriveLoadBundleIntoLocal() {
+  try {
+    const file = await gdriveFindBundle();
+    if (!file) return false;
+    const text = await gdriveDownloadFile(file.id);
+    const obj = JSON.parse(text);
+    gdriveBundle = Object.assign({ id: file.id }, obj);
+
+    // Merge Drive bundle into current local data (do not clobber local)
+    const localMeta = loadBoardsMeta();
+    const localMap = new Map((localMeta || []).map((b) => [b && b.id, b]).filter(([id]) => !!id));
+    const mergedMeta = Array.isArray(localMeta) ? localMeta.slice() : [];
+    const driveMeta = Array.isArray(obj.meta) ? obj.meta : [];
+    const driveStates = (obj && obj.states && typeof obj.states === 'object') ? obj.states : {};
+
+    // resolve ID collisions by renaming Drive boards that clash but look different
+    let driveCurrentId = obj.currentBoardId;
+    for (let i = 0; i < driveMeta.length; i++) {
+      const db = driveMeta[i];
+      if (!db || !db.id) continue;
+      const lb = localMap.get(db.id);
+      if (lb && !likelySameBoardMeta(lb, db)) {
+        // generate new id for the Drive board
+        let newId = genBoardId();
+        while (localMap.has(newId)) newId = genBoardId();
+        const oldId = db.id;
+        const renamed = Object.assign({}, db, { id: newId });
+        driveMeta[i] = renamed;
+        // move state
+        if (Object.prototype.hasOwnProperty.call(driveStates, oldId)) {
+          driveStates[newId] = driveStates[oldId];
+          delete driveStates[oldId];
+        }
+        if (driveCurrentId === oldId) driveCurrentId = newId;
+      }
+    }
+
+    for (const db of driveMeta) {
+      if (!db || !db.id) continue;
+      const lb = localMap.get(db.id);
+      if (!lb) {
+        mergedMeta.push(db);
+        localMap.set(db.id, db);
+      } else {
+        // Shallow-merge non-destructive: keep local values; fill gaps from Drive
+        if (!(typeof lb.lanes === 'number' && lb.lanes > 0) && typeof db.lanes === 'number') lb.lanes = db.lanes;
+        if (!Array.isArray(lb.storyNotes) && Array.isArray(db.storyNotes)) lb.storyNotes = db.storyNotes;
+        if (!(typeof lb.assigneeFilter === 'string') && typeof db.assigneeFilter === 'string') lb.assigneeFilter = db.assigneeFilter;
+        if (!(typeof lb.priorityFilter === 'string') && typeof db.priorityFilter === 'string') lb.priorityFilter = db.priorityFilter;
+        const lupd = (lb && typeof lb.updatedAt === 'number') ? lb.updatedAt : 0;
+        const dupd = (db && typeof db.updatedAt === 'number') ? db.updatedAt : 0;
+        lb.updatedAt = Math.max(lupd, dupd);
+      }
+    }
+
+    // Persist merged meta and add Drive-only states without overwriting local
+    try {
+      localStorage.setItem(BOARDS_META_KEY, JSON.stringify(mergedMeta));
+      for (const bid of Object.keys(driveStates)) {
+        const key = BOARD_STATE_PREFIX + bid;
+        let hasLocal = false;
+        try { hasLocal = localStorage.getItem(key) != null; } catch {}
+        if (!hasLocal) {
+          const cards = Array.isArray(driveStates[bid]) ? driveStates[bid] : [];
+          localStorage.setItem(key, JSON.stringify(cards));
+        }
+      }
+      // Determine current board preference: keep local current if still present; else use Drive's; else first
+      let curId = getCurrentBoardId();
+      if (!curId || !mergedMeta.some((b) => b && b.id === curId)) {
+        const driveCur = driveCurrentId;
+        if (driveCur && mergedMeta.some((b) => b && b.id === driveCur)) curId = driveCur;
+        else if (mergedMeta.length) curId = mergedMeta[0].id;
+      }
+      if (curId) localStorage.setItem(CURRENT_BOARD_KEY, curId);
+    } catch {}
+
+    gdriveDegraded = false;
+    return true;
+  } catch (e) {
+    console.warn('Não foi possível carregar bundle do Drive:', e);
+    gdriveDegraded = true;
+    return false;
+  }
+}
+
+async function gdriveSaveBundleFromLocal() {
+  const data = snapshotLocalDataForBundle();
+  const json = JSON.stringify(data, null, 2);
+  const existingId = (gdriveBundle && gdriveBundle.id) || (await (async()=>{ const f = await gdriveFindBundle(); return f ? f.id : null; })());
+  const meta = { name: 'Scrumy - All Boards.json', mimeType: 'application/json', appProperties: { app: 'scrumy', kind: 'bundle' } };
+  const boundary = 'scrumy_bundle_' + Math.random().toString(36).slice(2);
+  const body = [
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n`,
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${json}\r\n`,
+    `--${boundary}--`
+  ].join('');
+  const method = existingId ? 'PATCH' : 'POST';
+  const url = existingId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`
+    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+  const res = await gdriveAuthedFetch(url, { method, headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
+  if (!res) throw new Error('Falha ao salvar no Drive');
+  // success: clear degraded and reset backoff
+  gdriveDegraded = false;
+  gdriveRetryDelayMs = GDRIVE_RETRY_DELAY_MIN;
+}
+
+function scheduleGDriveRetry() {
+  if (!gdriveEnabled) return;
+  if (gdriveRetryTimer) { try { clearTimeout(gdriveRetryTimer); } catch {} }
+  const delay = Math.min(Math.max(gdriveRetryDelayMs, GDRIVE_RETRY_DELAY_MIN), GDRIVE_RETRY_DELAY_MAX);
+  gdriveRetryTimer = setTimeout(async () => {
+    try {
+      await gdriveSaveBundleFromLocal();
+      setGDriveStatus('Sincronizado', 'ok');
+      setTimeout(() => updateGDriveStatusUI(), 1500);
+    } catch (e) {
+      gdriveRetryDelayMs = Math.min(delay * 2, GDRIVE_RETRY_DELAY_MAX);
+      scheduleGDriveRetry();
+    }
+  }, delay);
+}
+
+function scheduleGDriveSave() {
+  if (!gdriveEnabled || !isGDriveTokenValid()) return;
+  if (gdriveSaveTimer) clearTimeout(gdriveSaveTimer);
+  gdriveSaving = true;
+  setGDriveStatus('Salvando...', 'info');
+  gdriveSaveTimer = setTimeout(async () => {
+    try {
+      await gdriveSaveBundleFromLocal();
+    } catch (err) {
+      console.warn('Drive save falhou:', err);
+      gdriveDegraded = true;
+      setGDriveStatus('Falha — usando local', 'warn');
+      scheduleGDriveRetry();
+    } finally {
+      gdriveSaving = false;
+      // Show a brief confirmation before returning to normal status
+      if (!gdriveDegraded) setGDriveStatus('✓ Salvo', 'ok');
+      setTimeout(() => updateGDriveStatusUI(), 1500);
+    }
+  }, 900);
+}
+
+async function gdriveSaveCurrentBoard() {
+  try {
+    if (!currentBoardId) { alert('Nenhum quadro selecionado.'); return; }
+    const { name, json } = getCurrentBoardDataForExport();
+    const existing = await gdriveFindExistingFileForCurrentBoard();
+    const info = await gdriveUploadJson(`Scrumy - ${name}.json`, json, existing ? existing.id : null);
+    alert(existing ? 'Atualizado no Google Drive.' : 'Salvo no Google Drive.');
+  } catch (e) {
+    console.error('Falha ao salvar no Drive:', e);
+    alert('Erro ao salvar no Google Drive. Verifique a conexão/permissões.');
+  }
+}
+
+async function gdriveOpenBoardFromDrive() {
+  try {
+    const files = await gdriveListAppFiles();
+    if (!files.length) { alert('Nenhum arquivo do Scrumy encontrado no seu Drive.'); return; }
+    const options = files.map((f, i) => `${i+1}) ${f.name} — ${new Date(f.modifiedTime).toLocaleString()}`).join('\n');
+    const input = prompt(`Escolha um arquivo para abrir (número):\n${options}`, '1');
+    if (input === null) return;
+    const idx = Math.max(1, Math.min(files.length, parseInt(String(input).trim(), 10) || 1)) - 1;
+    const file = files[idx];
+    const text = await gdriveDownloadFile(file.id);
+    let data = null;
+    try { data = JSON.parse(text); } catch { throw new Error('JSON inválido no arquivo selecionado.'); }
+
+    // Accept both legacy array and object export
+    let cards = [];
+    let name = '';
+    let lanes = 1;
+    let storyNotes = [];
+    let assigneeFilter = '';
+    let priorityFilter = '';
+    if (data && Array.isArray(data.cards)) {
+      cards = data.cards;
+      name = data.name || '';
+      lanes = (typeof data.lanes === 'number' && data.lanes > 0) ? Math.floor(data.lanes) : 1;
+      if (Array.isArray(data.storyNotes)) storyNotes = data.storyNotes;
+      if (typeof data.assigneeFilter === 'string') assigneeFilter = data.assigneeFilter.trim();
+      if (typeof data.priorityFilter === 'string') priorityFilter = data.priorityFilter.trim();
+    } else if (Array.isArray(data)) {
+      cards = data;
+    } else {
+      throw new Error('Formato de JSON não reconhecido.');
+    }
+
+    const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
+    if (asNew) {
+      createBoard(name || 'Importado', cards, lanes, storyNotes);
+      if (assigneeFilter) {
+        currentAssigneeFilter = assigneeFilter; setAssigneeFilterForCurrent(assigneeFilter);
+      }
+      if (priorityFilter) {
+        currentPriorityFilter = priorityFilter; setPriorityFilterForCurrent(priorityFilter);
+      }
+    } else {
+      setLanesCount(lanes);
+      setStoryNotes(storyNotes);
+      state = cards;
+      currentAssigneeFilter = assigneeFilter || ''; setAssigneeFilterForCurrent(currentAssigneeFilter);
+      currentPriorityFilter = priorityFilter || ''; setPriorityFilterForCurrent(currentPriorityFilter);
+      saveState();
+      renderBoard();
+    }
+    if (typeof closeMenus === 'function') closeMenus();
+    alert('Arquivo do Drive importado com sucesso.');
+  } catch (e) {
+    console.error('Falha ao abrir do Drive:', e);
+    alert('Erro ao abrir do Google Drive.');
+  }
+}
+
 // Global helper to close any open header menus
 function closeMenus() {
   document.querySelectorAll('.menu-item.open').forEach((item) => {
@@ -228,6 +752,8 @@ function loadBoardsMeta() {
 
 function saveBoardsMeta(meta) {
   localStorage.setItem(BOARDS_META_KEY, JSON.stringify(meta));
+  // Auto-sync to Drive on production when connected
+  scheduleGDriveSave();
 }
 
 function getCurrentBoardId() {
@@ -238,6 +764,7 @@ function setCurrentBoardId(id) {
   currentBoardId = id;
   try { localStorage.setItem(CURRENT_BOARD_KEY, id); } catch {}
   updateCurrentBoardName();
+  scheduleGDriveSave();
 }
 
 function getLanesCount() {
@@ -958,6 +1485,7 @@ function bindUI() {
       { btnId: "menuBoardsBtn", panelId: "menuBoards" },
       { btnId: "menuTasksBtn", panelId: "menuTasks" },
       { btnId: "menuExportBtn", panelId: "menuExport" },
+      { btnId: "menuDriveBtn", panelId: "menuDrive" },
     ];
     const entries = items.map(({ btnId, panelId }) => {
       const btn = document.getElementById(btnId);
@@ -1076,6 +1604,16 @@ function bindUI() {
       const file = e.target.files && e.target.files[0];
       if (file) importBoardJsonFile(file);
     });
+  }
+
+  // Google Drive menu bindings
+  const gdriveConnectBtn = document.getElementById('gdriveConnectBtn');
+  if (gdriveConnectBtn) {
+    gdriveConnectBtn.addEventListener('click', () => { gdriveConnect(); });
+  }
+  const gdriveDisconnectBtn = document.getElementById('gdriveDisconnectBtn');
+  if (gdriveDisconnectBtn) {
+    gdriveDisconnectBtn.addEventListener('click', () => { gdriveDisconnect(); });
   }
 
   const boardSelect = document.getElementById("boardSelect");
@@ -1301,6 +1839,7 @@ function init() {
   bindUI();
   setupDnD();
   renderBoard();
+  updateGDriveStatusUI();
 }
 
 // Export board as image (PNG)
@@ -1347,34 +1886,7 @@ async function exportBoardImage() {
 // Export current board as JSON
 function exportBoardJson() {
   try {
-    if (!currentBoardId) {
-      alert("Nenhum quadro selecionado.");
-      return;
-    }
-    const meta = loadBoardsMeta();
-    const cur = meta.find((b) => b.id === currentBoardId) || {};
-    const payload = {
-      id: currentBoardId,
-      name: cur.name || "Quadro",
-      createdAt: cur.createdAt || null,
-      updatedAt: cur.updatedAt || null,
-      lanes: getLanesCount(),
-      storyNotes: getStoryNotes(),
-      assigneeFilter: getAssigneeFilterForCurrent(),
-      priorityFilter: getPriorityFilterForCurrent(),
-      cards: state
-    };
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const slug = (cur.name || "quadro")
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || 'quadro';
-    const fileName = `scrumy-${slug}-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+    const { fileName, blob } = getCurrentBoardDataForExport(true);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = fileName;
@@ -1471,6 +1983,40 @@ function importBoardJsonFile(file) {
     alert('Não foi possível ler o arquivo selecionado.');
   };
   reader.readAsText(file);
+}
+
+// Build current board export data for JSON download/Drive upload
+function getCurrentBoardDataForExport(asBlob = false) {
+  if (!currentBoardId) {
+    alert('Nenhum quadro selecionado.');
+    throw new Error('Sem quadro.');
+  }
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId) || {};
+  const payload = {
+    id: currentBoardId,
+    name: cur.name || 'Quadro',
+    createdAt: cur.createdAt || null,
+    updatedAt: cur.updatedAt || null,
+    lanes: getLanesCount(),
+    storyNotes: getStoryNotes(),
+    assigneeFilter: getAssigneeFilterForCurrent(),
+    priorityFilter: getPriorityFilterForCurrent(),
+    cards: state
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const slug = (cur.name || 'quadro')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') || 'quadro';
+  const fileName = `scrumy-${slug}-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+  return asBlob
+    ? { fileName, blob: new Blob([json], { type: 'application/json' }), name: cur.name || 'Quadro', json }
+    : { fileName, name: cur.name || 'Quadro', json };
 }
 
 document.addEventListener("DOMContentLoaded", init);
