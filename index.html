@@ -47,6 +47,17 @@
                 <option value="__none__">Sem responsável</option>
               </select>
             </label>
+            <label class="menu-field">
+              <span>Filtrar por prioridade</span>
+              <select id="priorityFilterSelect" class="select" aria-label="Filtrar por prioridade">
+                <option value="">Todas</option>
+                <option value="__none__">Sem prioridade</option>
+                <option value="low">Baixa</option>
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="urgent">Urgente</option>
+              </select>
+            </label>
             <div class="menu-actions">
               <button id="addCardBtn" class="btn primary">Nova tarefa</button>
               <button id="clearBoardBtn" class="btn">Limpar quadro</button>
@@ -140,8 +151,9 @@
           <label class="field">
             <span>Prioridade</span>
             <select id="prioritySelect">
+              <option value="">Sem prioridade</option>
               <option value="low">Baixa</option>
-              <option value="medium" selected>Média</option>
+              <option value="medium">Média</option>
               <option value="high">Alta</option>
               <option value="urgent">Urgente</option>
             </select>

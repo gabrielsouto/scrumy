@@ -4,6 +4,7 @@ const BOARDS_META_KEY = "scrumy.boards.meta.v1";
 const CURRENT_BOARD_KEY = "scrumy.current.boardId.v1";
 const BOARD_STATE_PREFIX = "scrumy.board.v1."; // per-board state: scrumy.board.v1.<id>
 const ASSIGNEE_FILTER_NONE = "__none__"; // special value to show cards without assignee
+const PRIORITY_FILTER_NONE = "__none__"; // special value to show cards without priority
 const STATUSES = [
   { key: "story", label: "História" },
   { key: "backlog", label: "Backlog" },
@@ -16,6 +17,7 @@ const STATUSES = [
 let state = [];
 let currentBoardId = null;
 let currentAssigneeFilter = '';
+let currentPriorityFilter = '';
 // lanes are stored per-board in meta as `lanes` (number)
 
 function uid() {
@@ -270,6 +272,23 @@ function getAssigneeFilterForCurrent() {
   return v;
 }
 
+// Priority filter persistence per board (meta)
+function getPriorityFilterForCurrent() {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  const v = cur && typeof cur.priorityFilter === 'string' ? cur.priorityFilter : '';
+  return v;
+}
+
+function setPriorityFilterForCurrent(value) {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  if (!cur) return;
+  cur.priorityFilter = String(value || '');
+  cur.updatedAt = Date.now();
+  saveBoardsMeta(meta);
+}
+
 function setAssigneeFilterForCurrent(value) {
   const meta = loadBoardsMeta();
   const cur = meta.find((b) => b.id === currentBoardId);
@@ -462,6 +481,11 @@ function renderBoard() {
   if (!board) return;
   // Keep assignee filter options in sync
   try { refreshAssigneeFilterOptions(); } catch {}
+  // Sync priority filter UI selection
+  try {
+    const sel = document.getElementById('priorityFilterSelect');
+    if (sel) sel.value = currentPriorityFilter || '';
+  } catch {}
   board.innerHTML = '';
   const lanes = getLanesCount();
   const notes = getStoryNotes();
@@ -517,13 +541,23 @@ function renderBoard() {
 
         const selRaw = (currentAssigneeFilter || '').trim();
         const sel = selRaw.toLowerCase();
+        const pSelRaw = (currentPriorityFilter || '').trim();
         const cards = state.filter((c) => {
           if (c.status !== status.key) return false;
           if ((c.lane || 0) !== laneIndex) return false;
-          if (!selRaw) return true;
-          const a = String(c.assignee || '').trim().toLowerCase();
-          if (selRaw === ASSIGNEE_FILTER_NONE) return !a; // only without assignee
-          return a === sel;
+          // Assignee filter
+          if (selRaw) {
+            const a = String(c.assignee || '').trim().toLowerCase();
+            if (selRaw === ASSIGNEE_FILTER_NONE) { if (a) return false; }
+            else if (a !== sel) return false;
+          }
+          // Priority filter
+          if (pSelRaw) {
+            const p = String(c.priority || '').trim();
+            if (pSelRaw === PRIORITY_FILTER_NONE) { if (p) return false; }
+            else if (p !== pSelRaw) return false;
+          }
+          return true;
         });
         for (const card of cards) {
           container.appendChild(renderCard(card));
@@ -560,13 +594,14 @@ function createBoard(name, initialState = [], lanes = 1, storyNotes = null) {
   const lanesNum = Math.max(1, Math.floor(lanes || 1));
   let notes = Array.isArray(storyNotes) ? storyNotes.slice(0, lanesNum) : [];
   while (notes.length < lanesNum) notes.push("");
-  const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now(), lanes: lanesNum, storyNotes: notes, assigneeFilter: '' };
+const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now(), lanes: lanesNum, storyNotes: notes, assigneeFilter: '', priorityFilter: '' };
   meta.push(boardMeta);
   saveBoardsMeta(meta);
   localStorage.setItem(boardKey(id), JSON.stringify(initialState));
   setCurrentBoardId(id);
   state = initialState.slice();
   currentAssigneeFilter = '';
+  currentPriorityFilter = '';
   refreshBoardSelect();
   renderBoard();
   // Reflect created board in URL
@@ -589,6 +624,9 @@ function deleteBoard(id) {
     currentAssigneeFilter = (function(){
       try { return getAssigneeFilterForCurrent(); } catch { return ''; }
     })();
+    currentPriorityFilter = (function(){
+      try { return getPriorityFilterForCurrent(); } catch { return ''; }
+    })();
     refreshBoardSelect();
     renderBoard();
     // Reflect switched board in URL
@@ -601,6 +639,9 @@ function loadBoard(id) {
   state = loadStateForBoard(id);
   currentAssigneeFilter = (function(){
     try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+  })();
+  currentPriorityFilter = (function(){
+    try { return getPriorityFilterForCurrent(); } catch { return ''; }
   })();
   refreshBoardSelect();
   renderBoard();
@@ -651,8 +692,8 @@ function renderCard(card) {
     metaEl.appendChild(pill);
   }
   // Priority (badge)
-  const priority = (card.priority || 'medium');
-  if (priority) {
+  const priority = (card.priority || '');
+  if (priority === 'low' || priority === 'medium' || priority === 'high' || priority === 'urgent') {
     if (!metaEl) { metaEl = document.createElement('div'); metaEl.className = 'card-meta'; }
     const p = document.createElement('span');
     p.className = `priority-pill priority-${priority}`;
@@ -803,7 +844,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
       createdAtField.style.display = '';
     }
     statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
-    if (prioritySelect) prioritySelect.value = (card.priority || 'medium');
+    if (prioritySelect) prioritySelect.value = (card.priority || '');
     // Set color selection
     const currentColor = (card.color || '').toLowerCase();
     let found = false;
@@ -829,7 +870,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
       createdAtField.style.display = 'none';
     }
     statusSelect.value = "backlog";
-    if (prioritySelect) prioritySelect.value = 'medium';
+    if (prioritySelect) prioritySelect.value = '';
     // default color
     const def = document.querySelector('input[name="color"][value="yellow"]');
     if (def) def.checked = true;
@@ -923,7 +964,7 @@ function bindUI() {
     const observation = document.getElementById("obsInput").value.trim();
     const assignee = document.getElementById("assigneeInput").value.trim();
     let status = document.getElementById("statusSelect").value;
-    const priority = /** @type {HTMLSelectElement} */(document.getElementById("prioritySelect")).value || 'medium';
+    const priority = /** @type {HTMLSelectElement} */(document.getElementById("prioritySelect")).value || '';
     const colorEl = /** @type {HTMLInputElement|null} */(document.querySelector('input[name="color"]:checked'));
     const color = colorEl ? colorEl.value : 'yellow';
     if (!title) return;
@@ -936,14 +977,16 @@ function bindUI() {
         existing.description = description;
         existing.observation = observation;
         existing.assignee = assignee;
-        existing.priority = priority;
+        if (priority) existing.priority = priority; else delete existing.priority;
         existing.status = status;
         existing.color = color;
       }
     } else {
       const laneStr = document.getElementById('modal').dataset.createLane || '0';
       const laneIndex = parseInt(laneStr, 10) || 0;
-      state.push({ id: uid(), title, description, observation, assignee, priority, status, color, lane: laneIndex, createdAt: Date.now() });
+      const base = { id: uid(), title, description, observation, assignee, status, color, lane: laneIndex, createdAt: Date.now() };
+      if (priority) base.priority = priority;
+      state.push(base);
     }
 
     saveState();
@@ -1000,6 +1043,16 @@ function bindUI() {
       setAssigneeFilterForCurrent(currentAssigneeFilter);
       renderBoard();
       // Keep menu open/closed as is; no need to close
+    });
+  }
+
+  // Priority filter select
+  const priorityFilterSelect = document.getElementById('priorityFilterSelect');
+  if (priorityFilterSelect) {
+    priorityFilterSelect.addEventListener('change', () => {
+      currentPriorityFilter = (priorityFilterSelect.value || '').trim();
+      setPriorityFilterForCurrent(currentPriorityFilter);
+      renderBoard();
     });
   }
 
@@ -1253,6 +1306,7 @@ function exportBoardJson() {
       lanes: getLanesCount(),
       storyNotes: getStoryNotes(),
       assigneeFilter: getAssigneeFilterForCurrent(),
+      priorityFilter: getPriorityFilterForCurrent(),
       cards: state
     };
     const json = JSON.stringify(payload, null, 2);
@@ -1292,12 +1346,14 @@ function importBoardJsonFile(file) {
       let lanes = 1;
       let storyNotes = [];
       let assigneeFilter = '';
+      let priorityFilter = '';
       if (data && Array.isArray(data.cards)) {
         cards = data.cards;
         name = data.name || '';
         lanes = (typeof data.lanes === 'number' && data.lanes > 0) ? Math.floor(data.lanes) : 1;
         if (Array.isArray(data.storyNotes)) storyNotes = data.storyNotes;
         if (typeof data.assigneeFilter === 'string') assigneeFilter = data.assigneeFilter.trim();
+        if (typeof data.priorityFilter === 'string') priorityFilter = data.priorityFilter.trim();
       } else if (Array.isArray(data)) {
         cards = data;
       } else {
@@ -1316,10 +1372,12 @@ function importBoardJsonFile(file) {
         let status = c && typeof c.status === 'string' && validStatuses.has(c.status) ? c.status : 'backlog';
         if (status === 'story') status = 'backlog';
         const color = c && typeof c.color === 'string' && validColors.has(c.color) ? c.color : 'yellow';
-        const priority = c && typeof c.priority === 'string' && validPriorities.has(c.priority) ? c.priority : 'medium';
+        const priority = c && typeof c.priority === 'string' && validPriorities.has(c.priority) ? c.priority : '';
         const lane = (c && typeof c.lane === 'number' && c.lane >= 0) ? Math.floor(c.lane) : 0;
         const createdAt = (c && typeof c.createdAt === 'number') ? c.createdAt : Date.now();
-        return { id, title, description, observation, assignee, priority, status, color, lane, createdAt };
+        const obj = { id, title, description, observation, assignee, status, color, lane, createdAt };
+        if (priority) obj.priority = priority;
+        return obj;
       });
       const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
       if (asNew) {
@@ -1328,14 +1386,20 @@ function importBoardJsonFile(file) {
           currentAssigneeFilter = assigneeFilter;
           setAssigneeFilterForCurrent(assigneeFilter);
         }
+        if (priorityFilter) {
+          currentPriorityFilter = priorityFilter;
+          setPriorityFilterForCurrent(priorityFilter);
+        }
       } else {
         // When replacing current board, update lanes and story notes BEFORE rendering
         setLanesCount(lanes);
         setStoryNotes(storyNotes);
         state = normalized;
-        // Update assignee filter for current board
+        // Update filters for current board
         currentAssigneeFilter = assigneeFilter || '';
         setAssigneeFilterForCurrent(currentAssigneeFilter);
+        currentPriorityFilter = priorityFilter || '';
+        setPriorityFilterForCurrent(currentPriorityFilter);
         saveState();
         renderBoard();
       }

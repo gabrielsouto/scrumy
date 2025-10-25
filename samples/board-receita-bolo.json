@@ -19,7 +19,8 @@
                       "status":  "backlog",
                       "color":  "yellow",
                       "lane":  0,
-                      "createdAt":  1700000000000
+                      "createdAt":  1700000000000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-backlog-02",
@@ -30,7 +31,8 @@
                       "status":  "backlog",
                       "color":  "yellow",
                       "lane":  0,
-                      "createdAt":  1700000001000
+                      "createdAt":  1700000001000,
+                      "priority":  "low"
                   },
                   {
                       "id":  "c-backlog-03",
@@ -41,7 +43,8 @@
                       "status":  "backlog",
                       "color":  "yellow",
                       "lane":  0,
-                      "createdAt":  1700000002000
+                      "createdAt":  1700000002000,
+                      "priority":  "low"
                   },
                   {
                       "id":  "c-backlog-04",
@@ -52,7 +55,8 @@
                       "status":  "backlog",
                       "color":  "yellow",
                       "lane":  1,
-                      "createdAt":  1700000003000
+                      "createdAt":  1700000003000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-backlog-05",
@@ -63,7 +67,8 @@
                       "status":  "backlog",
                       "color":  "yellow",
                       "lane":  1,
-                      "createdAt":  1700000004000
+                      "createdAt":  1700000004000,
+                      "priority":  "high"
                   },
                   {
                       "id":  "c-todo-01",
@@ -74,7 +79,8 @@
                       "status":  "todo",
                       "color":  "blue",
                       "lane":  0,
-                      "createdAt":  1700000005000
+                      "createdAt":  1700000005000,
+                      "priority":  "high"
                   },
                   {
                       "id":  "c-todo-02",
@@ -85,7 +91,8 @@
                       "status":  "todo",
                       "color":  "blue",
                       "lane":  0,
-                      "createdAt":  1700000006000
+                      "createdAt":  1700000006000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-todo-03",
@@ -96,7 +103,8 @@
                       "status":  "todo",
                       "color":  "blue",
                       "lane":  0,
-                      "createdAt":  1700000007000
+                      "createdAt":  1700000007000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-todo-04",
@@ -107,7 +115,8 @@
                       "status":  "todo",
                       "color":  "blue",
                       "lane":  1,
-                      "createdAt":  1700000008000
+                      "createdAt":  1700000008000,
+                      "priority":  "high"
                   },
                   {
                       "id":  "c-todo-05",
@@ -118,7 +127,8 @@
                       "status":  "todo",
                       "color":  "blue",
                       "lane":  1,
-                      "createdAt":  1700000009000
+                      "createdAt":  1700000009000,
+                      "priority":  "urgent"
                   },
                   {
                       "id":  "c-doing-01",
@@ -129,7 +139,8 @@
                       "status":  "doing",
                       "color":  "red",
                       "lane":  0,
-                      "createdAt":  1700000010000
+                      "createdAt":  1700000010000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-doing-02",
@@ -140,7 +151,8 @@
                       "status":  "doing",
                       "color":  "red",
                       "lane":  0,
-                      "createdAt":  1700000011000
+                      "createdAt":  1700000011000,
+                      "priority":  "high"
                   },
                   {
                       "id":  "c-doing-03",
@@ -151,7 +163,8 @@
                       "status":  "doing",
                       "color":  "red",
                       "lane":  0,
-                      "createdAt":  1700000012000
+                      "createdAt":  1700000012000,
+                      "priority":  "urgent"
                   },
                   {
                       "id":  "c-doing-04",
@@ -162,7 +175,8 @@
                       "status":  "doing",
                       "color":  "red",
                       "lane":  1,
-                      "createdAt":  1700000013000
+                      "createdAt":  1700000013000,
+                      "priority":  "high"
                   },
                   {
                       "id":  "c-doing-05",
@@ -173,7 +187,8 @@
                       "status":  "doing",
                       "color":  "red",
                       "lane":  1,
-                      "createdAt":  1700000014000
+                      "createdAt":  1700000014000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-review-01",
@@ -184,7 +199,8 @@
                       "status":  "review",
                       "color":  "gray",
                       "lane":  0,
-                      "createdAt":  1700000015000
+                      "createdAt":  1700000015000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-review-02",
@@ -195,7 +211,8 @@
                       "status":  "review",
                       "color":  "gray",
                       "lane":  0,
-                      "createdAt":  1700000016000
+                      "createdAt":  1700000016000,
+                      "priority":  "low"
                   },
                   {
                       "id":  "c-review-03",
@@ -206,7 +223,8 @@
                       "status":  "review",
                       "color":  "gray",
                       "lane":  0,
-                      "createdAt":  1700000017000
+                      "createdAt":  1700000017000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-review-04",
@@ -217,7 +235,8 @@
                       "status":  "review",
                       "color":  "gray",
                       "lane":  1,
-                      "createdAt":  1700000018000
+                      "createdAt":  1700000018000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-review-05",
@@ -228,7 +247,8 @@
                       "status":  "review",
                       "color":  "gray",
                       "lane":  1,
-                      "createdAt":  1700000019000
+                      "createdAt":  1700000019000,
+                      "priority":  "high"
                   },
                   {
                       "id":  "c-done-01",
@@ -239,7 +259,8 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  0,
-                      "createdAt":  1700000020000
+                      "createdAt":  1700000020000,
+                      "priority":  "low"
                   },
                   {
                       "id":  "c-done-02",
@@ -250,7 +271,8 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  0,
-                      "createdAt":  1700000021000
+                      "createdAt":  1700000021000,
+                      "priority":  "low"
                   },
                   {
                       "id":  "c-done-03",
@@ -261,7 +283,8 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  0,
-                      "createdAt":  1700000022000
+                      "createdAt":  1700000022000,
+                      "priority":  "low"
                   },
                   {
                       "id":  "c-done-04",
@@ -272,7 +295,8 @@
                       "status":  "done",
                       "color":  "green",
                       "lane":  1,
-                      "createdAt":  1700000023000
+                      "createdAt":  1700000023000,
+                      "priority":  "medium"
                   },
                   {
                       "id":  "c-done-05",
@@ -285,5 +309,6 @@
                       "lane":  1,
                       "createdAt":  1700000024000
                   }
-              ]
+              ],
+    "priorityFilter":  ""
 }
