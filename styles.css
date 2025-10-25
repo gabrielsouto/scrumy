@@ -349,6 +349,16 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 .no-shadow-export .card-edit,
 .no-shadow-export .card-close { display: none !important; }
 
+/* During export, make footer flow with content to avoid overlay in tall captures */
+.no-shadow-export .app-footer {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: auto !important;
+  margin-top: 16px;
+}
+
 .card-edit {
   position: absolute;
   top: 6px;
