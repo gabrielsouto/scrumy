@@ -380,6 +380,21 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
 .card-edit:hover { background: var(--hover-2); color: var(--text); }
 .card-edit:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+/* Show edit/close only on hover or focus */
+.card .card-edit,
+.card .card-close {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease-in-out;
+}
+.card:hover .card-edit,
+.card:hover .card-close,
+.card .card-edit:focus,
+.card .card-close:focus {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* Modal */
 .modal {
   position: fixed; inset: 0; display: grid; place-items: center;
