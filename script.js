@@ -650,6 +650,20 @@ function renderCard(card) {
     pill.textContent = `👤 ${assignee}`;
     metaEl.appendChild(pill);
   }
+  // Priority (badge)
+  const priority = (card.priority || 'medium');
+  if (priority) {
+    if (!metaEl) { metaEl = document.createElement('div'); metaEl.className = 'card-meta'; }
+    const p = document.createElement('span');
+    p.className = `priority-pill priority-${priority}`;
+    p.title = 'Prioridade';
+    let label = 'Média';
+    if (priority === 'low') label = 'Baixa';
+    else if (priority === 'high') label = 'Alta';
+    else if (priority === 'urgent') label = 'Urgente';
+    p.textContent = label;
+    metaEl.appendChild(p);
+  }
   // Created at (read-only info)
   if (card && typeof card.createdAt === 'number') {
     if (!metaEl) {
@@ -773,6 +787,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
   const createdAtField = document.getElementById("createdAtField");
   const createdAtInput = document.getElementById("createdAtInput");
   const statusSelect = document.getElementById("statusSelect");
+  const prioritySelect = document.getElementById("prioritySelect");
   const colorRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="color"]'));
 
   if (mode === "edit" && card) {
@@ -788,6 +803,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
       createdAtField.style.display = '';
     }
     statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
+    if (prioritySelect) prioritySelect.value = (card.priority || 'medium');
     // Set color selection
     const currentColor = (card.color || '').toLowerCase();
     let found = false;
@@ -813,6 +829,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
       createdAtField.style.display = 'none';
     }
     statusSelect.value = "backlog";
+    if (prioritySelect) prioritySelect.value = 'medium';
     // default color
     const def = document.querySelector('input[name="color"][value="yellow"]');
     if (def) def.checked = true;
@@ -906,6 +923,7 @@ function bindUI() {
     const observation = document.getElementById("obsInput").value.trim();
     const assignee = document.getElementById("assigneeInput").value.trim();
     let status = document.getElementById("statusSelect").value;
+    const priority = /** @type {HTMLSelectElement} */(document.getElementById("prioritySelect")).value || 'medium';
     const colorEl = /** @type {HTMLInputElement|null} */(document.querySelector('input[name="color"]:checked'));
     const color = colorEl ? colorEl.value : 'yellow';
     if (!title) return;
@@ -918,13 +936,14 @@ function bindUI() {
         existing.description = description;
         existing.observation = observation;
         existing.assignee = assignee;
+        existing.priority = priority;
         existing.status = status;
         existing.color = color;
       }
     } else {
       const laneStr = document.getElementById('modal').dataset.createLane || '0';
       const laneIndex = parseInt(laneStr, 10) || 0;
-      state.push({ id: uid(), title, description, observation, assignee, status, color, lane: laneIndex, createdAt: Date.now() });
+      state.push({ id: uid(), title, description, observation, assignee, priority, status, color, lane: laneIndex, createdAt: Date.now() });
     }
 
     saveState();
@@ -1287,6 +1306,7 @@ function importBoardJsonFile(file) {
       // Normalize cards
       const validStatuses = new Set(STATUSES.map(s => s.key));
       const validColors = new Set(['yellow','blue','red','green','gray']);
+      const validPriorities = new Set(['low','medium','high','urgent']);
       const normalized = (cards || []).map((c) => {
         const id = c && typeof c.id === 'string' && c.id ? c.id : uid();
         const title = c && typeof c.title === 'string' ? c.title : '';
@@ -1296,9 +1316,10 @@ function importBoardJsonFile(file) {
         let status = c && typeof c.status === 'string' && validStatuses.has(c.status) ? c.status : 'backlog';
         if (status === 'story') status = 'backlog';
         const color = c && typeof c.color === 'string' && validColors.has(c.color) ? c.color : 'yellow';
+        const priority = c && typeof c.priority === 'string' && validPriorities.has(c.priority) ? c.priority : 'medium';
         const lane = (c && typeof c.lane === 'number' && c.lane >= 0) ? Math.floor(c.lane) : 0;
         const createdAt = (c && typeof c.createdAt === 'number') ? c.createdAt : Date.now();
-        return { id, title, description, observation, assignee, status, color, lane, createdAt };
+        return { id, title, description, observation, assignee, priority, status, color, lane, createdAt };
       });
       const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
       if (asNew) {
