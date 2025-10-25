@@ -609,14 +609,36 @@ async function gdriveLoadBundleIntoLocal() {
         mergedMeta.push(db);
         localMap.set(db.id, db);
       } else {
-        // Shallow-merge non-destructive: keep local values; fill gaps from Drive
-        if (!(typeof lb.lanes === 'number' && lb.lanes > 0) && typeof db.lanes === 'number') lb.lanes = db.lanes;
-        if (!Array.isArray(lb.storyNotes) && Array.isArray(db.storyNotes)) lb.storyNotes = db.storyNotes;
-        if (!(typeof lb.assigneeFilter === 'string') && typeof db.assigneeFilter === 'string') lb.assigneeFilter = db.assigneeFilter;
-        if (!(typeof lb.priorityFilter === 'string') && typeof db.priorityFilter === 'string') lb.priorityFilter = db.priorityFilter;
-        const lupd = (lb && typeof lb.updatedAt === 'number') ? lb.updatedAt : 0;
-        const dupd = (db && typeof db.updatedAt === 'number') ? db.updatedAt : 0;
-        lb.updatedAt = Math.max(lupd, dupd);
+        // If likely same board, apply Last-Write-Wins by updatedAt
+        if (likelySameBoardMeta(lb, db)) {
+          const lupd = (lb && typeof lb.updatedAt === 'number') ? lb.updatedAt : 0;
+          const dupd = (db && typeof db.updatedAt === 'number') ? db.updatedAt : 0;
+          if (dupd > lupd) {
+            // Drive is newer: replace local meta with Drive meta and overwrite local state with Drive state
+            const idx = mergedMeta.findIndex((b) => b && b.id === db.id);
+            if (idx !== -1) mergedMeta[idx] = Object.assign({}, db);
+            localMap.set(db.id, mergedMeta[idx]);
+            const key = BOARD_STATE_PREFIX + db.id;
+            const cards = Array.isArray(driveStates[db.id]) ? driveStates[db.id] : [];
+            try { localStorage.setItem(key, JSON.stringify(cards)); } catch {}
+          } else {
+            // Local is newer: keep local meta/state; optionally fill missing minor fields
+            if (!(typeof lb.lanes === 'number' && lb.lanes > 0) && typeof db.lanes === 'number') lb.lanes = db.lanes;
+            if (!Array.isArray(lb.storyNotes) && Array.isArray(db.storyNotes)) lb.storyNotes = db.storyNotes;
+            if (!(typeof lb.assigneeFilter === 'string') && typeof db.assigneeFilter === 'string') lb.assigneeFilter = db.assigneeFilter;
+            if (!(typeof lb.priorityFilter === 'string') && typeof db.priorityFilter === 'string') lb.priorityFilter = db.priorityFilter;
+            lb.updatedAt = Math.max(lupd, dupd);
+          }
+        } else {
+          // Different boards with same id already resolved above by renaming; keep conservative merge
+          if (!(typeof lb.lanes === 'number' && lb.lanes > 0) && typeof db.lanes === 'number') lb.lanes = db.lanes;
+          if (!Array.isArray(lb.storyNotes) && Array.isArray(db.storyNotes)) lb.storyNotes = db.storyNotes;
+          if (!(typeof lb.assigneeFilter === 'string') && typeof db.assigneeFilter === 'string') lb.assigneeFilter = db.assigneeFilter;
+          if (!(typeof lb.priorityFilter === 'string') && typeof db.priorityFilter === 'string') lb.priorityFilter = db.priorityFilter;
+          const lupd = (lb && typeof lb.updatedAt === 'number') ? lb.updatedAt : 0;
+          const dupd = (db && typeof db.updatedAt === 'number') ? db.updatedAt : 0;
+          lb.updatedAt = Math.max(lupd, dupd);
+        }
       }
     }
 

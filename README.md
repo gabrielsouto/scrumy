@@ -76,11 +76,13 @@ python -m http.server 8000
   - Resiliência: se o salvamento no Drive falhar, o app continua salvando localmente e tenta sincronizar em segundo plano com backoff exponencial até recuperar a conexão.
 
 #### Mesclagem e persistência
-- Ao conectar, o app NÃO sobrescreve seu conteúdo local com o do Drive. Em vez disso, mescla:
+- Ao conectar, o app mescla Drive e local com a regra “última escrita vence” (por quadro):
   - Mantém todos os quadros que já existem no localStorage.
   - Adiciona os quadros que estão no Drive e não existem localmente.
-  - Se um `id` de quadro existe nos dois e o nome for igual (ignorando maiúsculas/minúsculas), trata como o mesmo quadro e preenche apenas metadados que estejam faltando localmente (ex.: `lanes`, `storyNotes`, filtros), sem alterar os cartões locais.
-  - Se um `id` de quadro existe nos dois e o nome for diferente, o quadro vindo do Drive é renomeado com um novo `id` (único) para evitar colisão, e é adicionado como um quadro novo. O state do Drive é preservado com o novo `id`.
+  - Se um `id` existe em ambos e o nome é igual (ignora maiúsculas/minúsculas), considera o mesmo quadro e compara `updatedAt`:
+    - Se `updatedAt` do Drive for mais recente: substitui os metadados e os cartões locais pelo conteúdo do Drive.
+    - Se o local for mais recente: mantém o local (preenche apenas metadados faltantes, se houver).
+  - Se um `id` existe em ambos mas o nome é diferente, o quadro do Drive é renomeado com um novo `id` (único) e adicionado como um quadro novo (state preservado).
 - Escolha do quadro atual após mesclar:
   - Mantém o quadro atual local, se possível.
   - Senão, tenta usar o “current” do Drive.
