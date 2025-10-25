@@ -34,6 +34,7 @@ let gdriveRetryTimer = null;
 let gdriveRetryDelayMs = 30000; // start 30s; backoff up to 5min
 const GDRIVE_RETRY_DELAY_MIN = 5000;
 const GDRIVE_RETRY_DELAY_MAX = 300000; // 5 minutes
+const GDRIVE_ENABLED_KEY = "scrumy.gdrive.enabled.v1";
 
 // Drive bundle cache (auto-sync): mirrors all boards/meta
 let gdriveBundle = null; // { id?, version, meta, currentBoardId, states: { [id]: cards[] } }
@@ -313,6 +314,7 @@ async function gdriveConnect() {
       prev && prev(resp);
       if (resp && resp.access_token) {
         gdriveEnabled = true;
+        setGDrivePrefEnabled(true);
         gdriveDegraded = false;
         gdriveRetryDelayMs = GDRIVE_RETRY_DELAY_MIN;
         updateGDriveStatusUI();
@@ -349,6 +351,7 @@ function gdriveDisconnect() {
   gdriveEnabled = false;
   gdriveDegraded = false;
   if (gdriveRetryTimer) { try { clearTimeout(gdriveRetryTimer); } catch {} gdriveRetryTimer = null; }
+  setGDrivePrefEnabled(false);
   updateGDriveStatusUI();
 }
 
@@ -390,6 +393,17 @@ function setGDriveStatus(text, kind) {
   } catch {}
 }
 
+function getGDrivePrefEnabled() {
+  try { return localStorage.getItem(GDRIVE_ENABLED_KEY) === '1'; } catch { return false; }
+}
+
+function setGDrivePrefEnabled(v) {
+  try {
+    if (v) localStorage.setItem(GDRIVE_ENABLED_KEY, '1');
+    else localStorage.setItem(GDRIVE_ENABLED_KEY, '0');
+  } catch {}
+}
+
 async function waitForGoogleIdentity(timeoutMs = 6000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -428,6 +442,37 @@ async function gdriveTrySilentConnectIfPossible() {
   if (!ready) return false;
   // No auto-connect anymore
   return false;
+}
+
+async function gdriveMaybeReconnectOnLoad() {
+  if (!getGDrivePrefEnabled()) return; // user didn't opt-in to persist Drive usage
+  setGDriveStatus('Conectando...', 'info');
+  const ready = await ensureGoogleIdentityLoaded();
+  if (!ready) { updateGDriveStatusUI(); return; }
+  const client = ensureGDriveTokenClient(true);
+  if (!client) { updateGDriveStatusUI(); return; }
+  await new Promise((resolve) => {
+    const prev = client.callback;
+    client.callback = (resp) => { prev && prev(resp); resolve(); };
+    try { client.requestAccessToken({ prompt: '' }); } catch { resolve(); }
+  });
+  if (isGDriveTokenValid()) {
+    gdriveEnabled = true;
+    try {
+      const loaded = await gdriveLoadBundleIntoLocal();
+      if (loaded) {
+        const meta = loadBoardsMeta();
+        const curId = getCurrentBoardId() || (meta[0] && meta[0].id);
+        if (curId) {
+          setCurrentBoardId(curId);
+          state = loadStateForBoard(curId);
+          refreshBoardSelect();
+          renderBoard();
+        }
+      }
+    } catch {}
+  }
+  updateGDriveStatusUI();
 }
 
 async function gdriveAuthedFetch(url, opts = {}) {
@@ -1848,6 +1893,8 @@ function init() {
   setupDnD();
   renderBoard();
   updateGDriveStatusUI();
+  // Silent reconnect if user opted to keep Drive enabled previously
+  try { gdriveMaybeReconnectOnLoad(); } catch {}
 }
 
 // Export board as image (PNG)
