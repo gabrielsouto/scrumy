@@ -8,10 +8,10 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
   - Botão "+" na História: cria uma nova tarefa diretamente naquela linha.
 - Múltiplas linhas (swimlanes): adicionar/remover linha em Tarefas; “Limpar quadro” mantém 1 linha.
 - Múltiplos quadros: selecionar, criar, duplicar (Salvar como) e apagar.
-- Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Exportar).
+- Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Importar/Exportar e Google Drive).
 - Cartões: criar, editar e excluir — botões no canto superior direito (✎ editar, × excluir), visíveis ao passar o mouse sobre o card (também acessíveis via foco/teclado).
 - Arrastar e soltar entre colunas/linhas (drag & drop). Não é permitido soltar na coluna História.
-- Modal de cartão com Título, Descrição, Observação (rodapé do card), Responsável, Status e Cor.
+- Modal de cartão com Título, Descrição, Observação (rodapé do card), Responsável, Prioridade, Status e Cor.
 - Responsável: campo de texto com sugestões (autocomplete) baseadas nos nomes já usados em outros cards do quadro. Você pode digitar livremente ou escolher uma sugestão.
 - Filtro por responsável no menu Tarefas: mostre somente cards de um responsável, todos os cards, ou apenas os sem responsável. O filtro é lembrado por quadro.
 - Prioridade opcional nos cards: Baixa, Média, Alta, Urgente (ou Sem prioridade). Exibida como ícone de barras no card.
@@ -36,6 +36,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
    - Renomear: clique no nome do quadro (pill ao lado do logo) para editar inline (ícone de lápis aparece no hover). Enter salva, Esc cancela.
    - Tarefas: Nova tarefa | Nova linha | Remover linha | Limpar quadro | Filtrar por responsável.
    - Importar/Exportar: Exportar imagem (PNG do header + board) | Exportar JSON | Importar JSON.
+   - Google Drive: Conectar | Desconectar (status no rodapé; auto‑save quando conectado).
    - Tema: botão à direita alterna entre claro/escuro.
 3. Em cada cartão:
    - ✎ (canto superior direito) Editar — aparece ao passar o mouse ou ao focar o botão.
