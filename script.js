@@ -248,7 +248,15 @@ function toggleTheme() {
 // Google Drive helpers
 // ----------------------
 function getGoogleClientId() {
-  try { return localStorage.getItem(GDRIVE_CLIENT_ID_KEY) || ""; } catch { return ""; }
+  try {
+    const saved = localStorage.getItem(GDRIVE_CLIENT_ID_KEY);
+    if (typeof saved === 'string' && saved.trim()) return saved;
+  } catch {}
+  if (GDRIVE_DEFAULT_CLIENT_ID) {
+    try { localStorage.setItem(GDRIVE_CLIENT_ID_KEY, GDRIVE_DEFAULT_CLIENT_ID); } catch {}
+    return GDRIVE_DEFAULT_CLIENT_ID;
+  }
+  return "";
 }
 
 function setGoogleClientId(id) {
