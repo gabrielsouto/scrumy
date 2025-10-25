@@ -661,9 +661,9 @@ function renderCard(card) {
     createdLabel.className = 'created-pill';
     createdLabel.title = 'Criado';
     try {
-      createdLabel.textContent = `📅 ${d.toLocaleString('pt-BR')}`;
+      createdLabel.textContent = `📅 ${d.toLocaleDateString('pt-BR')}`;
     } catch {
-      createdLabel.textContent = `📅 ${d.toISOString()}`;
+      createdLabel.textContent = `📅 ${d.toISOString().slice(0,10)}`;
     }
     metaEl.appendChild(createdLabel);
   }
@@ -784,7 +784,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     if (assigneeInput) assigneeInput.value = card.assignee || "";
     if (createdAtField && createdAtInput) {
       const ts = (typeof card.createdAt === 'number') ? card.createdAt : Date.now();
-      try { createdAtInput.value = new Date(ts).toLocaleString('pt-BR'); } catch { createdAtInput.value = new Date(ts).toISOString(); }
+      try { createdAtInput.value = new Date(ts).toLocaleDateString('pt-BR'); } catch { createdAtInput.value = new Date(ts).toISOString().slice(0,10); }
       createdAtField.style.display = '';
     }
     statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
