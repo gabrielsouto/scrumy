@@ -14,10 +14,14 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Modal de cartão com Título, Descrição, Observação (rodapé do card), Responsável, Status e Cor.
 - Responsável: campo de texto com sugestões (autocomplete) baseadas nos nomes já usados em outros cards do quadro. Você pode digitar livremente ou escolher uma sugestão.
 - Filtro por responsável no menu Tarefas: mostre somente cards de um responsável, todos os cards, ou apenas os sem responsável. O filtro é lembrado por quadro.
+- Prioridade opcional nos cards: Baixa, Média, Alta, Urgente (ou Sem prioridade). Exibida como ícone de barras no card.
+- Filtro por prioridade no menu Tarefas: todas, sem prioridade, baixa, média, alta, urgente. O filtro é lembrado por quadro.
+- Datas somente leitura: “Criado” (data de criação) e “Concluído” (quando o status vira Concluído), exibidas no card e no modal (somente edição).
 - Cores de cartão (pastel): amarelo, azul, vermelho, verde e cinza.
 - Persistência automática no navegador via `localStorage`.
 - Tema claro/escuro com alternância na toolbar e preferência salva.
 - Exportar imagem (PNG) do header + board; durante a captura sombras e gradientes são desativados para um visual limpo.
+- Exportação longa melhorada: durante a captura o rodapé deixa de ser fixo para não sobrepor cards em quadros muito altos.
 - Exportar/Importar JSON do quadro (backup/restauração) incluindo `lanes`, `storyNotes` e campos dos cartões.
 - Limpar quadro (apaga todos os cartões e reseta para 1 linha).
 - Nome do quadro atual exibido ao lado do logo e renomeável inline (Enter salva, Esc cancela).
@@ -68,7 +72,8 @@ python -m http.server 8000
       "updatedAt": 0,
       "lanes": 1,
       "storyNotes": ["nota por linha"],
-      "assigneeFilter": "<nome>|__none__|" ,
+      "assigneeFilter": "<nome>|__none__|",
+      "priorityFilter": "low|medium|high|urgent|__none__|",
       "cards": [
         {
           "id": "<id>",
@@ -76,10 +81,12 @@ python -m http.server 8000
           "description": "<descrição>",
           "observation": "<observação>",
           "assignee": "<responsável>",
+          "priority": "low|medium|high|urgent",
           "status": "backlog|todo|doing|review|done",
           "color": "yellow|blue|red|green|gray",
           "lane": 0,
-          "createdAt": 0
+          "createdAt": 0,
+          "completedAt": 0
         }
       ]
     }
@@ -90,11 +97,17 @@ python -m http.server 8000
       - `""` (vazio) mostra todos os cards;
       - `"__none__"` mostra apenas cards sem responsável;
       - Qualquer outro texto filtra por nome exato (case-insensitive).
+    - `priority` é opcional em cada card. Se ausente, o card é considerado “sem prioridade”. Valores aceitos: `low`, `medium`, `high`, `urgent`.
+    - `priorityFilter` é opcional no topo do objeto do quadro. Valores:
+      - `""` (vazio) mostra todas as prioridades;
+      - `"__none__"` mostra apenas cards sem prioridade;
+      - `low|medium|high|urgent` filtram pelo nível correspondente.
+    - `completedAt` é opcional por card (definido automaticamente quando o status vira `done` e limpo ao sair de `done`).
   - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]` (campos ausentes são normalizados; `status: "story"` é convertido para `backlog`).
   - Ao substituir o quadro atual durante a importação, os valores de `lanes` e `storyNotes` do arquivo importado passam a valer no quadro e todas as linhas são renderizadas corretamente.
  
  Exemplo pronto para importar:
-- `samples/board-receita-bolo.json` — quadro “Receita de Bolo” com 2 linhas (lanes), responsáveis preenchidos nos cards e `assigneeFilter` incluído (vazio por padrão).
+- `samples/board-receita-bolo.json` — quadro “Receita de Bolo” com 2 linhas (lanes), responsáveis preenchidos, prioridades (inclui cards sem prioridade), `completedAt` nos concluídos e filtros (`assigneeFilter` e `priorityFilter`).
    - Use no app: Importar/Exportar → Importar JSON e selecione este arquivo.
 
 ## Quadros
