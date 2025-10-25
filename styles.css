@@ -269,7 +269,11 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
   border-radius: 999px;
   padding: 2px 6px;
   background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
+.pill-icon { width: 12px; height: 12px; display: block; fill: currentColor; }
 
 /* Priority pill */
 .priority-pill {

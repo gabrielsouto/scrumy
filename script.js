@@ -723,11 +723,13 @@ function renderCard(card) {
     const createdLabel = document.createElement('span');
     createdLabel.className = 'created-pill';
     createdLabel.title = 'Criado';
-    try {
-      createdLabel.textContent = `📅 ${d.toLocaleDateString('pt-BR')}`;
-    } catch {
-      createdLabel.textContent = `📅 ${d.toISOString().slice(0,10)}`;
-    }
+    let createdText = '';
+    try { createdText = d.toLocaleDateString('pt-BR'); } catch { createdText = d.toISOString().slice(0,10); }
+    createdLabel.innerHTML = `
+      <svg class="pill-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <path d="M7 2a1 1 0 0 0 0 2h1V2h2v2h4V2h2v2h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V2h0zM5 9v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9H5z"/>
+      </svg>
+      <span class="pill-text">${createdText}</span>`;
     metaEl.appendChild(createdLabel);
   }
 
@@ -741,11 +743,13 @@ function renderCard(card) {
     const doneLabel = document.createElement('span');
     doneLabel.className = 'completed-pill';
     doneLabel.title = 'Concluído';
-    try {
-      doneLabel.textContent = `🏁 ${d.toLocaleDateString('pt-BR')}`;
-    } catch {
-      doneLabel.textContent = `🏁 ${d.toISOString().slice(0,10)}`;
-    }
+    let doneText = '';
+    try { doneText = d.toLocaleDateString('pt-BR'); } catch { doneText = d.toISOString().slice(0,10); }
+    doneLabel.innerHTML = `
+      <svg class="pill-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <path d="M5 3a1 1 0 0 0-1 1v16h2v-6h6.2a3 3 0 0 0 2.4-1.2l.27-.36A1 1 0 0 1 16.6 12H13a3 3 0 0 1-2.4-1.2l-.27-.36A1 1 0 0 1 11.4 9H18V5H6V4a1 1 0 0 0-1-1z"/>
+      </svg>
+      <span class="pill-text">${doneText}</span>`;
     metaEl.appendChild(doneLabel);
   }
 
