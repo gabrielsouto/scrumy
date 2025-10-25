@@ -269,6 +269,15 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
   padding: 2px 6px;
   background: transparent;
 }
+.
+.completed-pill {
+  font-size: 10px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: var(--panel-2);
+}
 
 /* Priority pill */
 .priority-pill {

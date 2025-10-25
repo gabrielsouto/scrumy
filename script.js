@@ -731,6 +731,24 @@ function renderCard(card) {
     metaEl.appendChild(createdLabel);
   }
 
+  // Completed at (read-only info)
+  if (card && typeof card.completedAt === 'number') {
+    if (!metaEl) {
+      metaEl = document.createElement('div');
+      metaEl.className = 'card-meta';
+    }
+    const d = new Date(card.completedAt);
+    const doneLabel = document.createElement('span');
+    doneLabel.className = 'completed-pill';
+    doneLabel.title = 'Concluído';
+    try {
+      doneLabel.textContent = `🏁 ${d.toLocaleDateString('pt-BR')}`;
+    } catch {
+      doneLabel.textContent = `🏁 ${d.toISOString().slice(0,10)}`;
+    }
+    metaEl.appendChild(doneLabel);
+  }
+
   const desc = document.createElement("p");
   desc.className = "card-desc";
   desc.textContent = card.description || "";
@@ -817,8 +835,12 @@ function setupDnD() {
       const toLane = parseInt(col.dataset.lane || '0', 10) || 0;
       const samePlace = (card.status === toStatus) && ((card.lane || 0) === toLane);
       if (samePlace) return;
+      const wasDone = (card.status === 'done');
+      const nowDone = (toStatus === 'done');
       card.status = toStatus;
       card.lane = toLane;
+      if (nowDone && !card.completedAt) card.completedAt = Date.now();
+      if (!nowDone && typeof card.completedAt === 'number') delete card.completedAt;
       saveState();
       renderBoard();
     });
@@ -837,6 +859,8 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
   const createdAtInput = document.getElementById("createdAtInput");
   const statusSelect = document.getElementById("statusSelect");
   const prioritySelect = document.getElementById("prioritySelect");
+  const completedAtField = document.getElementById("completedAtField");
+  const completedAtInput = document.getElementById("completedAtInput");
   const colorRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="color"]'));
 
   if (mode === "edit" && card) {
@@ -853,6 +877,15 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     }
     statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
     if (prioritySelect) prioritySelect.value = (card.priority || '');
+    if (completedAtField && completedAtInput) {
+      if (typeof card.completedAt === 'number') {
+        try { completedAtInput.value = new Date(card.completedAt).toLocaleDateString('pt-BR'); } catch { completedAtInput.value = new Date(card.completedAt).toISOString().slice(0,10); }
+        completedAtField.style.display = '';
+      } else {
+        completedAtInput.value = '';
+        completedAtField.style.display = 'none';
+      }
+    }
     // Set color selection
     const currentColor = (card.color || '').toLowerCase();
     let found = false;
@@ -879,6 +912,10 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     }
     statusSelect.value = "backlog";
     if (prioritySelect) prioritySelect.value = '';
+    if (completedAtField && completedAtInput) {
+      completedAtInput.value = '';
+      completedAtField.style.display = 'none';
+    }
     // default color
     const def = document.querySelector('input[name="color"][value="yellow"]');
     if (def) def.checked = true;
@@ -988,12 +1025,18 @@ function bindUI() {
         if (priority) existing.priority = priority; else delete existing.priority;
         existing.status = status;
         existing.color = color;
+        // manage completion timestamp
+        const wasDone = (existing.status === 'done');
+        const nowDone = (status === 'done');
+        if (nowDone && !existing.completedAt) existing.completedAt = Date.now();
+        if (!nowDone && typeof existing.completedAt === 'number') delete existing.completedAt;
       }
     } else {
       const laneStr = document.getElementById('modal').dataset.createLane || '0';
       const laneIndex = parseInt(laneStr, 10) || 0;
       const base = { id: uid(), title, description, observation, assignee, status, color, lane: laneIndex, createdAt: Date.now() };
       if (priority) base.priority = priority;
+      if (status === 'done') base.completedAt = Date.now();
       state.push(base);
     }
 
@@ -1383,8 +1426,10 @@ function importBoardJsonFile(file) {
         const priority = c && typeof c.priority === 'string' && validPriorities.has(c.priority) ? c.priority : '';
         const lane = (c && typeof c.lane === 'number' && c.lane >= 0) ? Math.floor(c.lane) : 0;
         const createdAt = (c && typeof c.createdAt === 'number') ? c.createdAt : Date.now();
+        const completedAt = (c && typeof c.completedAt === 'number') ? c.completedAt : undefined;
         const obj = { id, title, description, observation, assignee, status, color, lane, createdAt };
         if (priority) obj.priority = priority;
+        if (typeof completedAt === 'number') obj.completedAt = completedAt;
         return obj;
       });
       const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
