@@ -40,6 +40,13 @@
         <div class="menu-item">
           <button id="menuTasksBtn" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Tarefas</button>
           <div id="menuTasks" class="menu-dropdown" role="menu" aria-label="Tarefas">
+            <label class="menu-field">
+              <span>Filtrar por responsável</span>
+              <select id="assigneeFilterSelect" class="select" aria-label="Filtrar por responsável">
+                <option value="">Todos</option>
+                <option value="__none__">Sem responsável</option>
+              </select>
+            </label>
             <div class="menu-actions">
               <button id="addCardBtn" class="btn primary">Nova tarefa</button>
               <button id="clearBoardBtn" class="btn">Limpar quadro</button>
@@ -109,6 +116,11 @@
           <label class="field">
             <span>Observação</span>
             <textarea id="obsInput" rows="2" placeholder="Anotações breves, links, etc."></textarea>
+          </label>
+          <label class="field">
+            <span>Responsável</span>
+            <input id="assigneeInput" type="text" list="assigneesList" maxlength="80" placeholder="Digite um nome ou escolha" />
+            <datalist id="assigneesList"></datalist>
           </label>
           <label class="field">
             <span>Status</span>

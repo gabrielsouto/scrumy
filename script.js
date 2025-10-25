@@ -3,6 +3,7 @@ const THEME_STORAGE_KEY = "scrumy.theme.v1";
 const BOARDS_META_KEY = "scrumy.boards.meta.v1";
 const CURRENT_BOARD_KEY = "scrumy.current.boardId.v1";
 const BOARD_STATE_PREFIX = "scrumy.board.v1."; // per-board state: scrumy.board.v1.<id>
+const ASSIGNEE_FILTER_NONE = "__none__"; // special value to show cards without assignee
 const STATUSES = [
   { key: "story", label: "História" },
   { key: "backlog", label: "Backlog" },
@@ -14,6 +15,7 @@ const STATUSES = [
 
 let state = [];
 let currentBoardId = null;
+let currentAssigneeFilter = '';
 // lanes are stored per-board in meta as `lanes` (number)
 
 function uid() {
@@ -260,6 +262,23 @@ function setLanesCount(n) {
   saveBoardsMeta(meta);
 }
 
+// Assignee filter persistence per board (meta)
+function getAssigneeFilterForCurrent() {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  const v = cur && typeof cur.assigneeFilter === 'string' ? cur.assigneeFilter : '';
+  return v;
+}
+
+function setAssigneeFilterForCurrent(value) {
+  const meta = loadBoardsMeta();
+  const cur = meta.find((b) => b.id === currentBoardId);
+  if (!cur) return;
+  cur.assigneeFilter = String(value || '');
+  cur.updatedAt = Date.now();
+  saveBoardsMeta(meta);
+}
+
 // Show/Hide lane controls according to current lanes count
 function updateLaneButtonsVisibility() {
   const btn = document.getElementById('removeLaneBtn');
@@ -395,9 +414,54 @@ function findCard(id) {
   return state.find((c) => c.id === id);
 }
 
+// Build a list of assignee suggestions from current board state
+function getAssigneeCandidates(limit = 15) {
+  try {
+    const counts = new Map(); // key: lowercased name, value: { name, count }
+    for (const c of state) {
+      const raw = (c && typeof c.assignee === 'string') ? c.assignee : '';
+      const name = raw.trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const entry = counts.get(key);
+      if (entry) {
+        entry.count += 1;
+      } else {
+        counts.set(key, { name, count: 1 }); // preserve first-seen casing
+      }
+    }
+    const arr = Array.from(counts.values());
+    arr.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count; // by frequency desc
+      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }); // then alpha
+    });
+    const names = arr.map(x => x.name);
+    return (typeof limit === 'number' && limit > 0) ? names.slice(0, limit) : names;
+  } catch { return []; }
+}
+
+function fillAssigneesDatalist(datalistId, names, ensureValue = '') {
+  const dl = document.getElementById(datalistId);
+  if (!dl) return;
+  const setLC = new Set((names || []).map(n => (n || '').toLowerCase()));
+  const opts = Array.isArray(names) ? names.slice() : [];
+  const cur = (ensureValue || '').trim();
+  if (cur && !setLC.has(cur.toLowerCase())) opts.unshift(cur);
+  // Render options
+  dl.innerHTML = '';
+  for (const n of opts) {
+    if (!n) continue;
+    const opt = document.createElement('option');
+    opt.value = n;
+    dl.appendChild(opt);
+  }
+}
+
 function renderBoard() {
   const board = document.getElementById('board');
   if (!board) return;
+  // Keep assignee filter options in sync
+  try { refreshAssigneeFilterOptions(); } catch {}
   board.innerHTML = '';
   const lanes = getLanesCount();
   const notes = getStoryNotes();
@@ -451,7 +515,16 @@ function renderBoard() {
         container.dataset.status = status.key;
         container.dataset.lane = String(laneIndex);
 
-        const cards = state.filter((c) => (c.status === status.key) && ((c.lane || 0) === laneIndex));
+        const selRaw = (currentAssigneeFilter || '').trim();
+        const sel = selRaw.toLowerCase();
+        const cards = state.filter((c) => {
+          if (c.status !== status.key) return false;
+          if ((c.lane || 0) !== laneIndex) return false;
+          if (!selRaw) return true;
+          const a = String(c.assignee || '').trim().toLowerCase();
+          if (selRaw === ASSIGNEE_FILTER_NONE) return !a; // only without assignee
+          return a === sel;
+        });
         for (const card of cards) {
           container.appendChild(renderCard(card));
         }
@@ -487,12 +560,13 @@ function createBoard(name, initialState = [], lanes = 1, storyNotes = null) {
   const lanesNum = Math.max(1, Math.floor(lanes || 1));
   let notes = Array.isArray(storyNotes) ? storyNotes.slice(0, lanesNum) : [];
   while (notes.length < lanesNum) notes.push("");
-  const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now(), lanes: lanesNum, storyNotes: notes };
+  const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), updatedAt: Date.now(), lanes: lanesNum, storyNotes: notes, assigneeFilter: '' };
   meta.push(boardMeta);
   saveBoardsMeta(meta);
   localStorage.setItem(boardKey(id), JSON.stringify(initialState));
   setCurrentBoardId(id);
   state = initialState.slice();
+  currentAssigneeFilter = '';
   refreshBoardSelect();
   renderBoard();
   // Reflect created board in URL
@@ -512,6 +586,9 @@ function deleteBoard(id) {
     const next = meta[0].id;
     setCurrentBoardId(next);
     state = loadStateForBoard(next);
+    currentAssigneeFilter = (function(){
+      try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+    })();
     refreshBoardSelect();
     renderBoard();
     // Reflect switched board in URL
@@ -522,6 +599,9 @@ function deleteBoard(id) {
 function loadBoard(id) {
   setCurrentBoardId(id);
   state = loadStateForBoard(id);
+  currentAssigneeFilter = (function(){
+    try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+  })();
   refreshBoardSelect();
   renderBoard();
   // Reflect selected board in URL
@@ -557,6 +637,19 @@ function renderCard(card) {
   title.textContent = card.title || "(Sem título)";
 
   head.append(title);
+
+  // Meta info (e.g., assignee)
+  let metaEl = null;
+  const assignee = (card.assignee || "").trim();
+  if (assignee) {
+    metaEl = document.createElement('div');
+    metaEl.className = 'card-meta';
+    const pill = document.createElement('span');
+    pill.className = 'assignee';
+    pill.title = 'Responsável';
+    pill.textContent = `👤 ${assignee}`;
+    metaEl.appendChild(pill);
+  }
 
   const desc = document.createElement("p");
   desc.className = "card-desc";
@@ -600,8 +693,13 @@ function renderCard(card) {
     openModal({ mode: 'edit', card });
   });
 
-  if (footer) el.append(head, desc, footer, editBtnCorner, closeBtn);
-  else el.append(head, desc, editBtnCorner, closeBtn);
+  if (footer) {
+    if (metaEl) el.append(head, metaEl, desc, footer, editBtnCorner, closeBtn);
+    else el.append(head, desc, footer, editBtnCorner, closeBtn);
+  } else {
+    if (metaEl) el.append(head, metaEl, desc, editBtnCorner, closeBtn);
+    else el.append(head, desc, editBtnCorner, closeBtn);
+  }
 
   el.addEventListener("dragstart", (e) => {
     el.classList.add("dragging");
@@ -654,6 +752,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
   const titleInput = document.getElementById("titleInput");
   const descInput = document.getElementById("descInput");
   const obsInput = document.getElementById("obsInput");
+  const assigneeInput = document.getElementById("assigneeInput");
   const statusSelect = document.getElementById("statusSelect");
   const colorRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="color"]'));
 
@@ -663,6 +762,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     titleInput.value = card.title || "";
     descInput.value = card.description || "";
     obsInput.value = card.observation || "";
+    if (assigneeInput) assigneeInput.value = card.assignee || "";
     statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
     // Set color selection
     const currentColor = (card.color || '').toLowerCase();
@@ -683,6 +783,7 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     titleInput.value = "";
     descInput.value = "";
     obsInput.value = "";
+    if (assigneeInput) assigneeInput.value = "";
     statusSelect.value = "backlog";
     // default color
     const def = document.querySelector('input[name="color"][value="yellow"]');
@@ -695,6 +796,13 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
   } else {
     delete modal.dataset.createLane;
   }
+
+  // Populate assignee suggestions from current state
+  try {
+    const currentAssignee = assigneeInput ? (assigneeInput.value || '') : '';
+    const suggestions = getAssigneeCandidates(15);
+    fillAssigneesDatalist('assigneesList', suggestions, currentAssignee);
+  } catch {}
 
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
@@ -768,6 +876,7 @@ function bindUI() {
     const title = document.getElementById("titleInput").value.trim();
     const description = document.getElementById("descInput").value.trim();
     const observation = document.getElementById("obsInput").value.trim();
+    const assignee = document.getElementById("assigneeInput").value.trim();
     let status = document.getElementById("statusSelect").value;
     const colorEl = /** @type {HTMLInputElement|null} */(document.querySelector('input[name="color"]:checked'));
     const color = colorEl ? colorEl.value : 'yellow';
@@ -780,13 +889,14 @@ function bindUI() {
         existing.title = title;
         existing.description = description;
         existing.observation = observation;
+        existing.assignee = assignee;
         existing.status = status;
         existing.color = color;
       }
     } else {
       const laneStr = document.getElementById('modal').dataset.createLane || '0';
       const laneIndex = parseInt(laneStr, 10) || 0;
-      state.push({ id: uid(), title, description, observation, status, color, lane: laneIndex, createdAt: Date.now() });
+      state.push({ id: uid(), title, description, observation, assignee, status, color, lane: laneIndex, createdAt: Date.now() });
     }
 
     saveState();
@@ -832,6 +942,17 @@ function bindUI() {
       }
       // Fechar o menu após selecionar um quadro
       closeMenus();
+    });
+  }
+
+  // Assignee filter select
+  const assigneeFilterSelect = document.getElementById('assigneeFilterSelect');
+  if (assigneeFilterSelect) {
+    assigneeFilterSelect.addEventListener('change', () => {
+      currentAssigneeFilter = (assigneeFilterSelect.value || '').trim();
+      setAssigneeFilterForCurrent(currentAssigneeFilter);
+      renderBoard();
+      // Keep menu open/closed as is; no need to close
     });
   }
 
@@ -915,6 +1036,38 @@ function bindUI() {
   updateLaneButtonsVisibility();
 }
 
+// Populate Assignee filter options from current state
+function refreshAssigneeFilterOptions() {
+  const select = document.getElementById('assigneeFilterSelect');
+  if (!select) return;
+  const candidates = getAssigneeCandidates(50);
+  // If current filter no longer exists, reset to all
+  const lcSet = new Set(candidates.map(n => (n || '').toLowerCase()));
+  const cur = (currentAssigneeFilter || '').toLowerCase();
+  if (cur && cur !== ASSIGNEE_FILTER_NONE && !lcSet.has(cur)) {
+    currentAssigneeFilter = '';
+    setAssigneeFilterForCurrent('');
+  }
+  // Rebuild options
+  const selValue = currentAssigneeFilter || '';
+  select.innerHTML = '';
+  const optAll = document.createElement('option');
+  optAll.value = '';
+  optAll.textContent = 'Todos';
+  select.appendChild(optAll);
+  const optNone = document.createElement('option');
+  optNone.value = ASSIGNEE_FILTER_NONE;
+  optNone.textContent = 'Sem responsável';
+  select.appendChild(optNone);
+  for (const name of candidates) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+  select.value = selValue;
+}
+
 function maybeSeed() {
   if (state.length) return;
   const samples = [
@@ -940,6 +1093,9 @@ function init() {
     if (existing) {
       setCurrentBoardId(existing.id);
       state = loadStateForBoard(existing.id);
+      currentAssigneeFilter = (function(){
+        try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+      })();
       refreshBoardSelect();
     } else {
       // Create empty board with the requested name
@@ -978,6 +1134,9 @@ function init() {
       setCurrentBoardId(curId);
     }
     state = loadStateForBoard(curId);
+    currentAssigneeFilter = (function(){
+      try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+    })();
     refreshBoardSelect();
     if (!state.length && meta.length === 1) {
       maybeSeed();
@@ -1046,6 +1205,7 @@ function exportBoardJson() {
       updatedAt: cur.updatedAt || null,
       lanes: getLanesCount(),
       storyNotes: getStoryNotes(),
+      assigneeFilter: getAssigneeFilterForCurrent(),
       cards: state
     };
     const json = JSON.stringify(payload, null, 2);
@@ -1084,11 +1244,13 @@ function importBoardJsonFile(file) {
       let name = '';
       let lanes = 1;
       let storyNotes = [];
+      let assigneeFilter = '';
       if (data && Array.isArray(data.cards)) {
         cards = data.cards;
         name = data.name || '';
         lanes = (typeof data.lanes === 'number' && data.lanes > 0) ? Math.floor(data.lanes) : 1;
         if (Array.isArray(data.storyNotes)) storyNotes = data.storyNotes;
+        if (typeof data.assigneeFilter === 'string') assigneeFilter = data.assigneeFilter.trim();
       } else if (Array.isArray(data)) {
         cards = data;
       } else {
@@ -1102,21 +1264,29 @@ function importBoardJsonFile(file) {
         const title = c && typeof c.title === 'string' ? c.title : '';
         const description = c && typeof c.description === 'string' ? c.description : '';
         const observation = c && typeof c.observation === 'string' ? c.observation : '';
+        const assignee = c && typeof c.assignee === 'string' ? c.assignee : '';
         let status = c && typeof c.status === 'string' && validStatuses.has(c.status) ? c.status : 'backlog';
         if (status === 'story') status = 'backlog';
         const color = c && typeof c.color === 'string' && validColors.has(c.color) ? c.color : 'yellow';
         const lane = (c && typeof c.lane === 'number' && c.lane >= 0) ? Math.floor(c.lane) : 0;
         const createdAt = (c && typeof c.createdAt === 'number') ? c.createdAt : Date.now();
-        return { id, title, description, observation, status, color, lane, createdAt };
+        return { id, title, description, observation, assignee, status, color, lane, createdAt };
       });
       const asNew = confirm('Importar como novo quadro?\nOK = criar novo quadro\nCancelar = substituir quadro atual');
       if (asNew) {
         createBoard(name || 'Importado', normalized, lanes, storyNotes);
+        if (assigneeFilter) {
+          currentAssigneeFilter = assigneeFilter;
+          setAssigneeFilterForCurrent(assigneeFilter);
+        }
       } else {
         // When replacing current board, update lanes and story notes BEFORE rendering
         setLanesCount(lanes);
         setStoryNotes(storyNotes);
         state = normalized;
+        // Update assignee filter for current board
+        currentAssigneeFilter = assigneeFilter || '';
+        setAssigneeFilterForCurrent(currentAssigneeFilter);
         saveState();
         renderBoard();
       }

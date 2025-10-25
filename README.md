@@ -11,7 +11,9 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Exportar).
 - Cartões: criar, editar e excluir — botões no canto superior direito (✎ editar, × excluir).
 - Arrastar e soltar entre colunas/linhas (drag & drop). Não é permitido soltar na coluna História.
-- Modal de cartão com Título, Descrição, Observação (rodapé do card), Status e Cor.
+- Modal de cartão com Título, Descrição, Observação (rodapé do card), Responsável, Status e Cor.
+- Responsável: campo de texto com sugestões (autocomplete) baseadas nos nomes já usados em outros cards do quadro. Você pode digitar livremente ou escolher uma sugestão.
+- Filtro por responsável no menu Tarefas: mostre somente cards de um responsável, todos os cards, ou apenas os sem responsável. O filtro é lembrado por quadro.
 - Cores de cartão (pastel): amarelo, azul, vermelho, verde e cinza.
 - Persistência automática no navegador via `localStorage`.
 - Tema claro/escuro com alternância na toolbar e preferência salva.
@@ -27,7 +29,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 2. Menu superior (cabeçalho fixo):
    - Quadros: Selecionar quadro | Novo Quadro | Salvar como | Apagar Quadro.
    - Renomear: clique no nome do quadro (pill ao lado do logo) para editar inline (ícone de lápis aparece no hover). Enter salva, Esc cancela.
-   - Tarefas: Nova tarefa | Nova linha | Remover linha | Limpar quadro.
+   - Tarefas: Nova tarefa | Nova linha | Remover linha | Limpar quadro | Filtrar por responsável.
    - Importar/Exportar: Exportar imagem (PNG do header + board) | Exportar JSON | Importar JSON.
    - Tema: botão à direita alterna entre claro/escuro.
 3. Em cada cartão:
@@ -66,12 +68,14 @@ python -m http.server 8000
       "updatedAt": 0,
       "lanes": 1,
       "storyNotes": ["nota por linha"],
+      "assigneeFilter": "<nome>|__none__|" ,
       "cards": [
         {
           "id": "<id>",
           "title": "<título>",
           "description": "<descrição>",
           "observation": "<observação>",
+          "assignee": "<responsável>",
           "status": "backlog|todo|doing|review|done",
           "color": "yellow|blue|red|green|gray",
           "lane": 0,
@@ -80,11 +84,17 @@ python -m http.server 8000
       ]
     }
     ```
+  - Observações:
+    - `assignee` é opcional em cada card (texto livre). Se ausente/vazio, o card é considerado “sem responsável”.
+    - `assigneeFilter` é opcional no topo do objeto do quadro. Valores:
+      - `""` (vazio) mostra todos os cards;
+      - `"__none__"` mostra apenas cards sem responsável;
+      - Qualquer outro texto filtra por nome exato (case-insensitive).
   - Lista de cartões: `[ { id, title, description, status, createdAt }, ... ]` (campos ausentes são normalizados; `status: "story"` é convertido para `backlog`).
   - Ao substituir o quadro atual durante a importação, os valores de `lanes` e `storyNotes` do arquivo importado passam a valer no quadro e todas as linhas são renderizadas corretamente.
  
  Exemplo pronto para importar:
-- `samples/board-receita-bolo.json` — quadro “Receita de Bolo” com 2 linhas (lanes) e cartões distribuídos entre backlog, todo, doing, review e done.
+- `samples/board-receita-bolo.json` — quadro “Receita de Bolo” com 2 linhas (lanes), responsáveis preenchidos nos cards e `assigneeFilter` incluído (vazio por padrão).
    - Use no app: Importar/Exportar → Importar JSON e selecione este arquivo.
 
 ## Quadros
