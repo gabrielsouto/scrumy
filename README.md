@@ -56,7 +56,8 @@ python -m http.server 8000
 - Registro de quadros (lista e metadados) em `scrumy.boards.meta.v1`.
 - Quadro atual selecionado em `scrumy.current.boardId.v1`.
 - Migração automática: se houver dados antigos em `scrumy.board.v1`, eles são movidos para um quadro padrão "Quadro 1" na primeira carga.
-- Os dados ficam no navegador atual (por máquina/perfil). Limpar dados do site apaga o quadro.
+- Quando desconectado do Drive: os dados ficam apenas no navegador atual (por máquina/perfil). Limpar dados do site apaga os quadros locais.
+- Quando conectado ao Google Drive: todos os quadros são salvos em um bundle no seu Drive; ao reconectar em outro dispositivo, a versão mais recente por quadro (updatedAt) vence.
 
 ### Google Drive (conectar para salvar no Drive)
 - Menu "Google Drive": contém apenas "Conectar" e "Desconectar".
@@ -202,12 +203,10 @@ Testado em navegadores modernos. Requer suporte a `localStorage`, `drag & drop` 
 - Rodapé fixo com links para GitHub e para o canal do autor (YouTube: Gabriel Souto).
 
 ## Limitações
-- Sem sincronização: os dados ficam no navegador/perfil local (não há backup/conta/login).
-- Sem colaboração em tempo real: uso é individual no dispositivo atual.
-- Limpar dados do site/apagar `localStorage` remove quadros e cartões.
+- Sem sincronização em tempo real: a sincronização ocorre por usuário ao conectar ao Google Drive; a regra é “última escrita vence” por quadro.
+- Sem colaboração simultânea: não há edição em tempo real multiusuário.
 - Exportação de imagem é um snapshot estático (não inclui interações/menus abertos).
- - Google Drive: auto‑save é single‑user por navegador/conta. Sem colaboração em tempo real ou resolução de conflitos.
- - Quando desconectado, dados permanecem no navegador (localStorage). Ao conectar, o app carrega do Drive e passa a salvar lá.
+- Quando desconectado, dados permanecem apenas no navegador (localStorage). Ao conectar, o app carrega do Drive e passa a salvar lá.
 
 ## Links
 - Site: https://scrumy.com.br/
