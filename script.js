@@ -691,22 +691,26 @@ function renderCard(card) {
     pill.textContent = `👤 ${assignee}`;
     metaEl.appendChild(pill);
   }
-  // Priority (badge)
+  // Priority (badge as signal bars SVG)
   const priority = (card.priority || '');
   if (priority === 'low' || priority === 'medium' || priority === 'high' || priority === 'urgent') {
     if (!metaEl) { metaEl = document.createElement('div'); metaEl.className = 'card-meta'; }
     const p = document.createElement('span');
-    p.className = `priority-pill priority-${priority}`;
-    // Visual only: represent priority with signal bars emoji 📶
-    // low=📶, medium=📶📶, high=📶📶📶, urgent=📶📶📶📶
-    let bars = '📶';
+    const level = (priority === 'low') ? 1 : (priority === 'medium') ? 2 : (priority === 'high') ? 3 : 4;
+    p.className = `priority-pill priority-${priority} lvl-${level}`;
     let label = 'Baixa';
-    if (priority === 'medium') { bars = '📶📶'; label = 'Média'; }
-    else if (priority === 'high') { bars = '📶📶📶'; label = 'Alta'; }
-    else if (priority === 'urgent') { bars = '📶📶📶📶'; label = 'Urgente'; }
-    p.textContent = bars;
+    if (level === 2) label = 'Média';
+    else if (level === 3) label = 'Alta';
+    else if (level === 4) label = 'Urgente';
     p.title = `Prioridade: ${label}`;
     p.setAttribute('aria-label', `Prioridade: ${label}`);
+    p.innerHTML = `
+      <svg viewBox="0 0 22 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <rect class="bar bar1" x="2" y="12" width="3" height="4" rx="1"/>
+        <rect class="bar bar2" x="7" y="9" width="3" height="7" rx="1"/>
+        <rect class="bar bar3" x="12" y="6" width="3" height="10" rx="1"/>
+        <rect class="bar bar4" x="17" y="3" width="3" height="13" rx="1"/>
+      </svg>`;
     metaEl.appendChild(p);
   }
   // Created at (read-only info)

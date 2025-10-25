@@ -277,7 +277,21 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .4px; }
   padding: 2px 8px;
   font-weight: 600;
   border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
 }
+.priority-pill svg { width: 16px; height: 14px; display: block; }
+.priority-pill .bar { fill: currentColor; opacity: .25; }
+.priority-pill.lvl-1 .bar1,
+.priority-pill.lvl-2 .bar1,
+.priority-pill.lvl-3 .bar1,
+.priority-pill.lvl-4 .bar1 { opacity: 1; }
+.priority-pill.lvl-2 .bar2,
+.priority-pill.lvl-3 .bar2,
+.priority-pill.lvl-4 .bar2 { opacity: 1; }
+.priority-pill.lvl-3 .bar3,
+.priority-pill.lvl-4 .bar3 { opacity: 1; }
+.priority-pill.lvl-4 .bar4 { opacity: 1; }
 .priority-low { color: #6b7280; background: rgba(107,114,128,.15); border-color: rgba(107,114,128,.35); }
 .priority-medium { color: #3b82f6; background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.35); }
 .priority-high { color: #f59e0b; background: rgba(245,158,11,.15); border-color: rgba(245,158,11,.35); }
