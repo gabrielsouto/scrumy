@@ -9,7 +9,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Múltiplas linhas (swimlanes): adicionar/remover linha em Tarefas; “Limpar quadro” mantém 1 linha.
 - Múltiplos quadros: selecionar, criar, duplicar (Salvar como) e apagar.
 - Cabeçalho fixo com menu (dropdowns: Quadros, Tarefas, Exportar).
-- Cartões: criar, editar e excluir — botões no canto superior direito (✎ editar, × excluir).
+- Cartões: criar, editar e excluir — botões no canto superior direito (✎ editar, × excluir), visíveis ao passar o mouse sobre o card (também acessíveis via foco/teclado).
 - Arrastar e soltar entre colunas/linhas (drag & drop). Não é permitido soltar na coluna História.
 - Modal de cartão com Título, Descrição, Observação (rodapé do card), Responsável, Status e Cor.
 - Responsável: campo de texto com sugestões (autocomplete) baseadas nos nomes já usados em outros cards do quadro. Você pode digitar livremente ou escolher uma sugestão.
@@ -37,8 +37,8 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
    - Importar/Exportar: Exportar imagem (PNG do header + board) | Exportar JSON | Importar JSON.
    - Tema: botão à direita alterna entre claro/escuro.
 3. Em cada cartão:
-   - ✎ (canto superior direito) Editar.
-   - × (canto superior direito) Excluir (com confirmação).
+   - ✎ (canto superior direito) Editar — aparece ao passar o mouse ou ao focar o botão.
+   - × (canto superior direito) Excluir — aparece ao passar o mouse ou ao focar o botão (com confirmação).
 4. Arraste cartões entre colunas/linhas para alterar status/linha. Observação: não é possível soltar na coluna História.
 5. Coluna História: clique no campo para escrever notas da linha; salva automaticamente. Use o botão "+" (no canto da História) para criar uma nova tarefa diretamente nessa linha.
 
