@@ -19,7 +19,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Datas somente leitura: “Criado” (data de criação) e “Concluído” (quando o status vira Concluído), exibidas no card e no modal (somente edição).
 - Cores de cartão (pastel): amarelo, azul, vermelho, verde e cinza.
 - Persistência automática no navegador via `localStorage`.
-- Integração opcional com Google Drive (manualmente: salvar/abrir JSON no seu Drive).
+- Integração com Google Drive: ao conectar, salva e sincroniza automaticamente (bundle único no Drive), com mesclagem "última escrita vence", status no rodapé e fallback para localStorage.
 - Tema claro/escuro com alternância na toolbar e preferência salva.
 - Exportar imagem (PNG) do header + board; durante a captura sombras e gradientes são desativados para um visual limpo.
 - Exportação longa melhorada: durante a captura o rodapé deixa de ser fixo para não sobrepor cards em quadros muito altos.
