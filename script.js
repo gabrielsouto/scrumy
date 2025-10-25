@@ -650,6 +650,23 @@ function renderCard(card) {
     pill.textContent = `👤 ${assignee}`;
     metaEl.appendChild(pill);
   }
+  // Created at (read-only info)
+  if (card && typeof card.createdAt === 'number') {
+    if (!metaEl) {
+      metaEl = document.createElement('div');
+      metaEl.className = 'card-meta';
+    }
+    const d = new Date(card.createdAt);
+    const createdLabel = document.createElement('span');
+    createdLabel.className = 'created-pill';
+    createdLabel.title = 'Criado';
+    try {
+      createdLabel.textContent = `📅 ${d.toLocaleString('pt-BR')}`;
+    } catch {
+      createdLabel.textContent = `📅 ${d.toISOString()}`;
+    }
+    metaEl.appendChild(createdLabel);
+  }
 
   const desc = document.createElement("p");
   desc.className = "card-desc";
@@ -753,6 +770,8 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
   const descInput = document.getElementById("descInput");
   const obsInput = document.getElementById("obsInput");
   const assigneeInput = document.getElementById("assigneeInput");
+  const createdAtField = document.getElementById("createdAtField");
+  const createdAtInput = document.getElementById("createdAtInput");
   const statusSelect = document.getElementById("statusSelect");
   const colorRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="color"]'));
 
@@ -763,6 +782,11 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     descInput.value = card.description || "";
     obsInput.value = card.observation || "";
     if (assigneeInput) assigneeInput.value = card.assignee || "";
+    if (createdAtField && createdAtInput) {
+      const ts = (typeof card.createdAt === 'number') ? card.createdAt : Date.now();
+      try { createdAtInput.value = new Date(ts).toLocaleString('pt-BR'); } catch { createdAtInput.value = new Date(ts).toISOString(); }
+      createdAtField.style.display = '';
+    }
     statusSelect.value = (card.status === 'story') ? 'backlog' : card.status;
     // Set color selection
     const currentColor = (card.color || '').toLowerCase();
@@ -784,6 +808,10 @@ function openModal({ mode, card, lane } = { mode: "create" }) {
     descInput.value = "";
     obsInput.value = "";
     if (assigneeInput) assigneeInput.value = "";
+    if (createdAtField && createdAtInput) {
+      createdAtInput.value = '';
+      createdAtField.style.display = 'none';
+    }
     statusSelect.value = "backlog";
     // default color
     const def = document.querySelector('input[name="color"][value="yellow"]');
