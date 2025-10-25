@@ -10,7 +10,8 @@
   --card: #111827;
   --danger: #ef4444;
   --shadow: 0 6px 20px rgba(0,0,0,.25);
-  --bg-gradient: radial-gradient(1200px 800px at 20% 0%, #0b1220 0%, #0b1220 35%, #0f172a 100%);
+  /* Use viewport-based gradient size to avoid cutoffs on ultra-wide/high pages */
+  --bg-gradient: radial-gradient(140vw 160vh at 20% 0%, #0b1220 0%, #0b1220 35%, #0f172a 100%);
   --hover-1: rgba(255,255,255,.03);
   --hover-2: rgba(255,255,255,.05);
   --overlay-bg: rgba(2,6,23,.6);
@@ -41,7 +42,7 @@
   --card: #ffffff;
   --danger: #ef4444;
   --shadow: 0 4px 16px rgba(0,0,0,.08);
-  --bg-gradient: radial-gradient(1200px 800px at 20% 0%, #ffffff 0%, #ffffff 40%, #f1f5f9 100%);
+  --bg-gradient: radial-gradient(140vw 160vh at 20% 0%, #ffffff 0%, #ffffff 40%, #f1f5f9 100%);
   --hover-1: rgba(0,0,0,.04);
   --hover-2: rgba(0,0,0,.06);
   --overlay-bg: rgba(0,0,0,.45);
@@ -64,7 +65,11 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-  background: var(--bg-gradient);
+  /* Ensure background fills large/scrolling pages and ultra-wide screens */
+  background-color: var(--bg);
+  background-image: var(--bg-gradient);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text);
   padding-bottom: 56px; /* espaço para o rodapé fixo */
   padding-top: 64px; /* espaço para o cabeçalho fixo */
