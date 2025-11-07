@@ -20,6 +20,7 @@ Scrumy é um quadro Kanban/Scrum simples, estático (HTML/CSS/JS), para organiza
 - Cores de cartão (pastel): amarelo, azul, vermelho, verde e cinza.
 - Persistência automática no navegador via `localStorage`.
 - Integração com Google Drive: ao conectar, salva e sincroniza automaticamente (bundle único no Drive), com mesclagem "última escrita vence", status no rodapé e fallback para localStorage.
+- Inicialização limpa: toda visita começa com o quadro vazio e só recarrega dados salvos se o Drive não puder ser usado naquele momento.
 - Tema claro/escuro com alternância na toolbar e preferência salva.
 - Exportar imagem (PNG) do header + board; durante a captura sombras e gradientes são desativados para um visual limpo.
 - Exportação longa melhorada: durante a captura o rodapé deixa de ser fixo para não sobrepor cards em quadros muito altos.
@@ -58,7 +59,7 @@ python -m http.server 8000
 - Quadro atual selecionado em `scrumy.current.boardId.v1`.
 - Migração automática: se houver dados antigos em `scrumy.board.v1`, eles são movidos para um quadro padrão "Quadro 1" na primeira carga.
 - Quando desconectado do Drive: os dados ficam apenas no navegador atual (por máquina/perfil). Limpar dados do site apaga os quadros locais.
-- Quando conectado ao Google Drive: todos os quadros são salvos em um bundle no seu Drive; ao reconectar em outro dispositivo, a versão mais recente por quadro (updatedAt) vence.
+- Quando conectado ao Google Drive: todos os quadros são salvos em um bundle no seu Drive; ao reconectar em outro dispositivo, a versão mais recente por quadro (updatedAt) vence e o app evita mostrar dados antigos até saber se conseguiu baixar do Drive.
 
 ### Google Drive (conectar para salvar no Drive)
 - Menu "Google Drive": contém apenas "Conectar" e "Desconectar".
@@ -76,6 +77,7 @@ python -m http.server 8000
   - Clique em "Desconectar" para voltar a usar apenas o armazenamento local (localStorage).
   - Não há tentativa de conexão automática ao abrir o site; a conexão só ocorre quando você clicar em "Conectar".
   - Resiliência: se o salvamento no Drive falhar, o app continua salvando localmente e tenta sincronizar em segundo plano com backoff exponencial até recuperar a conexão.
+  - Segurança na carga: toda visita tenta um “silent connect” primeiro; só se o Drive ficar indisponível é que o bundle local é reidratado (evita mostrar dados defasados).
 
 #### Mesclagem e persistência
 - Ao conectar, o app mescla Drive e local com a regra “última escrita vence” (por quadro):

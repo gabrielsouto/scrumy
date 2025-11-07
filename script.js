@@ -445,17 +445,19 @@ async function gdriveTrySilentConnectIfPossible() {
 }
 
 async function gdriveMaybeReconnectOnLoad() {
-  if (!getGDrivePrefEnabled()) return; // user didn't opt-in to persist Drive usage
+  if (!getGDrivePrefEnabled()) return false; // user didn't opt-in to persist Drive usage
   setGDriveStatus('Conectando...', 'info');
   const ready = await ensureGoogleIdentityLoaded();
-  if (!ready) { updateGDriveStatusUI(); return; }
+  if (!ready) { updateGDriveStatusUI(); return false; }
   const client = ensureGDriveTokenClient(true);
-  if (!client) { updateGDriveStatusUI(); return; }
+  if (!client) { updateGDriveStatusUI(); return false; }
   await new Promise((resolve) => {
     const prev = client.callback;
     client.callback = (resp) => { prev && prev(resp); resolve(); };
     try { client.requestAccessToken({ prompt: '' }); } catch { resolve(); }
   });
+
+  let loadedFromDrive = false;
   if (isGDriveTokenValid()) {
     gdriveEnabled = true;
     try {
@@ -466,13 +468,23 @@ async function gdriveMaybeReconnectOnLoad() {
         if (curId) {
           setCurrentBoardId(curId);
           state = loadStateForBoard(curId);
+          currentAssigneeFilter = (function(){
+            try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+          })();
+          currentPriorityFilter = (function(){
+            try { return getPriorityFilterForCurrent(); } catch { return ''; }
+          })();
           refreshBoardSelect();
           renderBoard();
         }
+        loadedFromDrive = true;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Falha ao restaurar dados do Drive:', err);
+    }
   }
   updateGDriveStatusUI();
+  return loadedFromDrive;
 }
 
 async function gdriveAuthedFetch(url, opts = {}) {
@@ -1190,7 +1202,9 @@ function refreshBoardSelect() {
   }
 }
 
-function createBoard(name, initialState = [], lanes = 1, storyNotes = null) {
+function createBoard(name, initialState = [], lanes = 1, storyNotes = null, options = null) {
+  const opts = (options && typeof options === 'object') ? options : {};
+  const skipRender = !!opts.skipRender;
   const meta = loadBoardsMeta();
   const id = "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const lanesNum = Math.max(1, Math.floor(lanes || 1));
@@ -1201,13 +1215,16 @@ const boardMeta = { id, name: name || "Novo Quadro", createdAt: Date.now(), upda
   saveBoardsMeta(meta);
   localStorage.setItem(boardKey(id), JSON.stringify(initialState));
   setCurrentBoardId(id);
-  state = initialState.slice();
+  state = skipRender ? [] : initialState.slice();
   currentAssigneeFilter = '';
   currentPriorityFilter = '';
   refreshBoardSelect();
-  renderBoard();
-  // Reflect created board in URL
+  if (!skipRender) {
+    renderBoard();
+  }
+  // Reflect created board in URL even when skipping the initial draw
   updateBoardURLForCurrent();
+  return id;
 }
 
 function deleteBoard(id) {
@@ -1249,6 +1266,24 @@ function loadBoard(id) {
   renderBoard();
   // Reflect selected board in URL
   updateBoardURLForCurrent();
+}
+
+function hydrateCurrentBoardFromLocal() {
+  if (!currentBoardId) return false;
+  state = loadStateForBoard(currentBoardId);
+  currentAssigneeFilter = (function(){
+    try { return getAssigneeFilterForCurrent(); } catch { return ''; }
+  })();
+  currentPriorityFilter = (function(){
+    try { return getPriorityFilterForCurrent(); } catch { return ''; }
+  })();
+  refreshBoardSelect();
+  const meta = loadBoardsMeta();
+  if (!state.length && Array.isArray(meta) && meta.length === 1) {
+    maybeSeed();
+  }
+  renderBoard();
+  return true;
 }
 
 function saveBoardAs(name) {
@@ -1853,29 +1888,19 @@ function init() {
   // Theme first to avoid FOUC between dark/light
   applyTheme(getInitialTheme());
 
-  // If a name is provided via URL, create/select that board immediately
-  const requestedName = getBoardNameFromURL();
+  const requestedName = (getBoardNameFromURL() || '').trim();
+  let meta = loadBoardsMeta();
+
   if (requestedName) {
-    const metaNow = loadBoardsMeta();
-    const existing = metaNow.find((b) => (b.name || "").toLowerCase() === requestedName.toLowerCase());
+    const existing = meta.find((b) => (b.name || '').toLowerCase() === requestedName.toLowerCase());
     if (existing) {
       setCurrentBoardId(existing.id);
-      state = loadStateForBoard(existing.id);
-      currentAssigneeFilter = (function(){
-        try { return getAssigneeFilterForCurrent(); } catch { return ''; }
-      })();
-      refreshBoardSelect();
     } else {
-      // Create empty board with the requested name
-      createBoard(requestedName, []);
+      createBoard(requestedName, [], 1, null, { skipRender: true });
     }
-    bindUI();
-    setupDnD();
-    renderBoard();
-    return;
+    meta = loadBoardsMeta();
   }
 
-  let meta = loadBoardsMeta();
   let curId = getCurrentBoardId();
 
   if (!meta.length) {
@@ -1888,12 +1913,13 @@ function init() {
     } catch { legacy = []; }
 
     if (legacy.length) {
-      createBoard("Quadro 1", legacy);
+      createBoard("Quadro 1", legacy, 1, null, { skipRender: true });
       try { localStorage.removeItem(STORAGE_KEY); } catch {}
     } else {
-      createBoard("Quadro 1", []);
-      maybeSeed();
+      createBoard("Quadro 1", [], 1, null, { skipRender: true });
     }
+    meta = loadBoardsMeta();
+    curId = getCurrentBoardId();
   } else {
     if (!curId || !meta.some((b) => b.id === curId)) {
       curId = meta[0].id;
@@ -1901,22 +1927,34 @@ function init() {
     } else {
       setCurrentBoardId(curId);
     }
-    state = loadStateForBoard(curId);
-    currentAssigneeFilter = (function(){
-      try { return getAssigneeFilterForCurrent(); } catch { return ''; }
-    })();
-    refreshBoardSelect();
-    if (!state.length && meta.length === 1) {
-      maybeSeed();
-    }
   }
+
+  // Render empty UI first until storage source is resolved
+  state = [];
+  currentAssigneeFilter = '';
+  currentPriorityFilter = '';
+  refreshBoardSelect();
 
   bindUI();
   setupDnD();
   renderBoard();
   updateGDriveStatusUI();
+
   // Silent reconnect if user opted to keep Drive enabled previously
-  try { gdriveMaybeReconnectOnLoad(); } catch {}
+  let reconnectPromise;
+  try {
+    reconnectPromise = gdriveMaybeReconnectOnLoad();
+  } catch (err) {
+    reconnectPromise = Promise.reject(err);
+  }
+
+  Promise.resolve(reconnectPromise)
+    .then((loadedFromDrive) => {
+      if (!loadedFromDrive) hydrateCurrentBoardFromLocal();
+    })
+    .catch(() => {
+      hydrateCurrentBoardFromLocal();
+    });
 }
 
 // Export board as image (PNG)
